@@ -326,9 +326,15 @@ public class PointerTable : RomData, IFileSplit
             else
             {
                 s.Seek(songPtr.RomAddress, SeekOrigin.Begin);
-                Songs.Add(new SndHeader(s, new SongInfo(i), opt));
+                try
+                {
+                    Songs.Add(new SndHeader(s, new SongInfo(i), opt));
+                }
+                catch (InvalidSongHeaderException e) 
+                {
+                    Console.WriteLine(e);
+                }
             }
-
             i++;
         }
     }
@@ -375,39 +381,39 @@ public class PointerTable : RomData, IFileSplit
     //     foreach (var x in)
     // }
 
-    // private struct SndChThreshold
-    // {
-    //     public Dictionary<SndChPtrNum, long> Ch = [];
-    //
-    //     public SndChThreshold()
-    //     {
-    //         Clear();
-    //     }
-    //
-    //     public void Clear()
-    //     {
-    //         Ch[SndChPtrNum.SND_CH1_PTR] = long.MaxValue;
-    //         Ch[SndChPtrNum.SND_CH2_PTR] = long.MaxValue;
-    //         Ch[SndChPtrNum.SND_CH3_PTR] = long.MaxValue;
-    //         Ch[SndChPtrNum.SND_CH4_PTR] = long.MaxValue;
-    //     }
-    //
-    //     public SndChPtrNum FindFirst(long pos)
-    //     {
-    //         var res = SndChPtrNum.SND_CH1_PTR;
-    //         foreach (var x in Ch)
-    //             if (pos >= x.Value && res < x.Key) // pos >= threshold
-    //                 res = x.Key;
-    //         return res;
-    //     }
-    // }
-    //
+     private struct SndChThreshold
+     {
+         public Dictionary<SndChPtrNum, long> Ch = [];
+    
+         public SndChThreshold()
+         {
+             Clear();
+         }
+    
+         public void Clear()
+         {
+             Ch[SndChPtrNum.SND_CH1_PTR] = long.MaxValue;
+             Ch[SndChPtrNum.SND_CH2_PTR] = long.MaxValue;
+             Ch[SndChPtrNum.SND_CH3_PTR] = long.MaxValue;
+             Ch[SndChPtrNum.SND_CH4_PTR] = long.MaxValue;
+         }
+    
+         public SndChPtrNum FindFirst(long pos)
+         {
+             var res = SndChPtrNum.SND_CH1_PTR;
+             foreach (var x in Ch)
+                 if (pos >= x.Value && res < x.Key) // pos >= threshold
+                     res = x.Key;
+             return res;
+         }
+     }
+    
     private void FillGaps(SortedSet<RomData> romData, GapMode mode)
     {
         // Find gaps (either unreferenced or padded)
         RomData? last = null;
         long? expectedNext = null;
-      //  var sndChMap = new SndChThreshold();
+        var sndChMap = new SndChThreshold();
 
         var fakeState = new SongInfo(0);
         var gapData = new HashSet<RomData>();
@@ -416,20 +422,24 @@ public class PointerTable : RomData, IFileSplit
             //--
             // Update state as needed
             if (x is SndHeader xHead)
+            {
                 fakeState.Id = xHead.Id;
+                sndChMap.Clear();
+            }
             else if (x is SndChHeader xChHead)
             {
                 fakeState.ChPtr = xChHead.SoundChannelPtr;
                 fakeState.IsSfx = xChHead.InitialStatus.HasFlag(SndInfoStatus.SIS_SFX);
+                sndChMap.Ch[xChHead.SoundChannelPtr] = xChHead.Data.Location.RomAddress;
             }
             //--
 
-         //  if (mode != GapMode.ByteOnly && x is SndHeader sndHeader)
-         //  {
-         //      sndChMap.Clear();
-         //      foreach (var y in sndHeader.Channels)
-         //          sndChMap.Ch[y.SoundChannelPtr] = y.Data.Location.RomAddress;
-         //  }
+            //  if (mode != GapMode.ByteOnly && x is SndHeader sndHeader)
+            //  {
+            //      sndChMap.Clear();
+            //      foreach (var y in sndHeader.Channels)
+            //          sndChMap.Ch[y.SoundChannelPtr] = y.Data.Location.RomAddress;
+            //  }
 
             if (expectedNext.HasValue && expectedNext != x.Location.RomAddress)
             {
@@ -459,6 +469,7 @@ public class PointerTable : RomData, IFileSplit
                     // Assume that any unreferenced data right after a sound channel header is also a sound channel header
                     var header = new SndChHeader(_s, fakeState, _opt);
                     AddToOpcodeMap(gapData, header);
+                    sndChMap.Ch[fakeState.ChPtr] = header.Data.Location.RomAddress;
                 }
                 else
                 {
@@ -467,6 +478,7 @@ public class PointerTable : RomData, IFileSplit
                     var parser = OpcodeParser.Create(_opt);
                    // var sndChPtr = sndChMap.FindFirst(_s.Position);
                     var first = true;
+                    fakeState.ChPtr = sndChMap.FindFirst(_s.Position);
                    // var fakeState = new SongInfo(9999) { ChPtr = sndChPtr }; // TODO: store copies at the start of the song?
                     while (_s.Position < x.Location.RomAddress)
                     {
@@ -546,6 +558,13 @@ public class PointerTable : RomData, IFileSplit
     }
 }
 
+public class InvalidSongHeaderException : Exception
+{
+    public InvalidSongHeaderException(string? message) : base(message)
+    {
+    }
+}
+
 public class SndHeader : RomData, IFileSplit
 {
     public readonly List<SndChHeader> Channels;
@@ -555,7 +574,8 @@ public class SndHeader : RomData, IFileSplit
     public SndHeader(Stream s, SongInfo song, FormatOptions opt) : base(s)
     {
         var count = s.ReadByte();
-        Debug.Assert(count > 0 && count <= 4, "Channel count out of range.");
+        if (count > 4)
+            throw new InvalidSongHeaderException($"Song {song.Id:X2} at {Location.ToBankString()} probably points to code.");
 
         Channels = new List<SndChHeader>(count);
         for (var i = 0; i < count; i++)
