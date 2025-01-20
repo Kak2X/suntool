@@ -8,14 +8,21 @@ using System.Diagnostics;
 //var bnk = "0D:4C5E"; // "0D:4C14"
 //var songCount = 1; // 76
 {
+    /*
+        var src = "1F:46A5";
+    var bnk = default(string);
+    var songCount = 52;
+    var format = DataMode.KOF96;
+    */
+
     var src = "0D:4B08";
     var bnk = "0D:4C14";
     var songCount = 76;
-
+    var format = DataMode.OP;
     using (var fs = new FileStream("original.gb", FileMode.Open))
     {
         fs.Seek(GbPtrPool.Create(src).RomAddress, SeekOrigin.Begin);
-        var test = new PointerTable(fs, songCount, GbPtr.Create(bnk), new FormatOptions { Mode = FormatOptions.DataMode.OP });
+        var test = new PointerTable(fs, songCount, bnk != null ? GbPtr.Create(bnk) : null, new FormatOptions { Mode = format });
         var dump = test.GetRomDump(GapMode.TryDecode);
         dump.ToDisassembly("C:\\soundtemp");
     }
@@ -51,13 +58,13 @@ else
     var outputPath = xargs.Get("output", true);
     var format = xargs.Get("format", true).ToUpperInvariant() switch
     {
-        "96" => FormatOptions.DataMode.KOF96,
-        "OP" => FormatOptions.DataMode.OP,
+        "96" => DataMode.KOF96,
+        "OP" => DataMode.OP,
         _ => throw new Exception("Improper --format parameter."),
     };
     var ptrTable = GbPtrPool.Create(xargs.Get("ptr-tbl", true));
     var songCount = int.Parse(xargs.Get("count", true));
-    var bankTbl = format == FormatOptions.DataMode.OP ? GbPtrPool.Create(xargs.Get("bank-tbl", true)) : null;
+    var bankTbl = format == DataMode.OP ? GbPtrPool.Create(xargs.Get("bank-tbl", true)) : null;
 
     using (var fs = new FileStream(sourceFile, FileMode.Open))
     {
