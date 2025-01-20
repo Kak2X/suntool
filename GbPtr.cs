@@ -609,7 +609,7 @@ public class SndChHeader : RomData
     public SndInfoStatus InitialStatus;
     public SndChPtrNum SoundChannelPtr;
     public SndData Data;
-    public SciNote? BaseNote;
+    public int FineTune;
     public byte Unused;
 
     public SndChHeader(Stream s, SongInfo song, FormatOptions opt) : base(s)
@@ -617,7 +617,7 @@ public class SndChHeader : RomData
         InitialStatus = (SndInfoStatus)s.ReadByte();
         SoundChannelPtr = (SndChPtrNum)s.ReadByte();
         var sndDataPointer = s.ReadLocalPtr();
-        BaseNote = SciNote.Create(s.ReadByte());
+        FineTune = s.ReadByte();
         Unused = (byte)s.ReadByte();
 
         song.IsSfx = InitialStatus.HasFlag(SndInfoStatus.SIS_SFX);
@@ -638,7 +638,7 @@ public class SndChHeader : RomData
         sw.WriteIndent($"db {InitialStatus.GenerateConstLabel()} ; Initial playback status");
         sw.WriteIndent($"db {SoundChannelPtr} ; Sound channel ptr");
         sw.WriteIndent($"dw {Data.Location.ToLabel()} ; Data ptr");
-        sw.WriteIndent($"{SciNote.ToDnote(BaseNote)} ; Base note");
+        sw.WriteIndent($"db {FineTune.ToSigned()} ; Initial fine tune");
         sw.WriteIndent($"db ${Unused:X2} ; Unused");
     }
 }
@@ -923,7 +923,7 @@ public class CmdFineTune : SndOpcode
 
     public override void WriteToDisasm(MultiWriter sw)
     {
-        sw.WriteCommand("fine_tune", $"{Offset}");
+        sw.WriteCommand("fine_tune", $"{Offset.ToSigned()}");
     }
 }
 
@@ -1733,6 +1733,11 @@ public static class StreamExtensions
 
 public static class NumExtensions
 {
+    public static int ToSigned(this int n)
+    {
+        return n > 0x7F ? n - 0x100 : n;
+    }
+
     public static string GenerateConstLabel<T>(this T n) where T : Enum
     {
         return n.ToString().Replace(", ", "|");
