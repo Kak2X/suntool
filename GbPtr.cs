@@ -7,7 +7,7 @@ public class GbPtr : IEquatable<GbPtr>, IComparable, IComparable<GbPtr>
     public readonly int Bank;
     public readonly int Address;
     public readonly long RomAddress;
-    public string? Label = null;
+    public string? Label { get; set; }
 
     private const int BankSize = 0x4000;
 
@@ -16,7 +16,6 @@ public class GbPtr : IEquatable<GbPtr>, IComparable, IComparable<GbPtr>
         Bank = bank;
         Address = address;
         RomAddress = (bank * BankSize) + (address >= BankSize ? address - BankSize : address);
-        //Label = $"L{Bank:X2}{Address:X4}";
     }
 
     public GbPtr(long romAddress)
@@ -24,9 +23,9 @@ public class GbPtr : IEquatable<GbPtr>, IComparable, IComparable<GbPtr>
         Bank = (int)(romAddress / BankSize);
         Address = (int)(romAddress % BankSize) + (Bank > 0 ? BankSize : 0);
         RomAddress = romAddress;
-        //Label = $"L{Bank:X2}{Address:X4}";
     }
-    public void SetLabel(string v) => Label = v;
+
+
     public bool SetLabelIfNew(string v)
     {
         if (Label != null)
@@ -35,20 +34,9 @@ public class GbPtr : IEquatable<GbPtr>, IComparable, IComparable<GbPtr>
         return true;
     }
 
-    public string ToBankString()
-    {
-        return $"{Bank:X2}:{Address:X4}";
-    }
-
-    public string ToDefaultLabel()
-    {
-        return $"L{Bank:X2}{Address:X4}";
-    }
-
-    public string ToLabel()
-    {
-        return Label ?? ToDefaultLabel();
-    }
+    public string ToBankString() => $"{Bank:X2}:{Address:X4}";
+    public string ToDefaultLabel() => $"L{Bank:X2}{Address:X4}";
+    public string ToLabel() => Label ?? ToDefaultLabel();
 
     public static GbPtr Create(string loc)
     {
@@ -485,7 +473,7 @@ public class PointerTable : RomData, IFileSplit
                         var opcode = parser.Parse(_s, fakeState);
                         if (first)
                         {
-                            opcode.Location.SetLabel($"SndData_Unused_{opcode.Location.RomAddress:X8}");
+                            opcode.Location.Label = $"SndData_Unused_{opcode.Location.RomAddress:X8}";
                             first = false;
                         }
                         gapData.Add(opcode);
@@ -584,7 +572,7 @@ public class SndHeader : RomData, IFileSplit
         // IsSfx / TypeString is defined by here
         Id = song.Id;
         IsSfx = song.IsSfx;
-        Location.SetLabel($"SndHeader_{song.TypeString}_{song.Id:X2}");
+        Location.Label = $"SndHeader_{song.TypeString}_{song.Id:X2}";
     }
 
     public string GetFilename()
@@ -628,7 +616,7 @@ public class SndChHeader : RomData
         Data = new SndData(s, song, opt);
         s.Seek(originalPos, SeekOrigin.Begin);
 
-        Location.SetLabel($".ch{song.ChNum}");
+        Location.Label = $".ch{song.ChNum}";
     }
 
     public override int SizeInRom() => 6;
@@ -650,7 +638,7 @@ public class SndData : RomData
 
     public SndData(Stream s, SongInfo song, FormatOptions opt) : base(s)
     {
-        Location.SetLabel($"SndData_{song.TypeString}_{song.Id:X2}_Ch{song.ChNum}");
+        Location.SetLabelIfNew($"SndData_{song.TypeString}_{song.Id:X2}_Ch{song.ChNum}");
 
         Main = new SndFunc(s, song, opt);
         // Find calls from main function
@@ -684,7 +672,7 @@ public class SndData : RomData
         var subNo = 0;
         foreach (var x in Subs.OrderBy(x => x.Location))
         {
-            x.Location.SetLabel($"SndCall_{song.TypeString}_{song.Id:X2}_Ch{song.ChNum}_{subNo:X}");
+            x.Location.SetLabelIfNew($"SndCall_{song.TypeString}_{song.Id:X2}_Ch{song.ChNum}_{subNo:X}");
             subNo++;
         }
     }
@@ -749,7 +737,7 @@ public class GenericByteArray : RomData, IFileSplit
 
     public GenericByteArray(Stream s, long targetPos) : base(s)
     {
-        Location.SetLabel($"Padding_{Location.RomAddress:X8}");
+        Location.Label = $"Padding_{Location.RomAddress:X8}";
         var length = (int)(targetPos - s.Position);
         Data = new byte[length];
         s.Read(Data, 0, length);
@@ -1169,7 +1157,7 @@ public class CmdVibratoOp : SndOpcode
 
     public CmdVibratoOp(GbPtr p, Stream s) : base(p)
     {
-        VibratoId = s.ReadByte();
+        VibratoId = s.ReadByte() / 3;
     }
 
     public override int SizeInRom() => 2;
@@ -1594,10 +1582,6 @@ public struct SciNote
         return new SciNote((NoteDef)note, octave);
     }
 
-    public static string ToDnote(SciNote? note)
-    {
-        return $"dnote {ToNoteAsm(note)}";
-    }
     public static string ToNoteAsm(SciNote? note)
     {
         return note.HasValue ? $"{note.Value.Note.ToLabel()},{note.Value.Octave}" : "0";
