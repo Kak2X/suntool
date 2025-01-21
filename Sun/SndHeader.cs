@@ -9,7 +9,7 @@ public class SndHeader : RomData, IFileSplit
     public SndHeader(Stream s, SongInfo song, FormatOptions opt) : base(s)
     {
         var count = s.ReadByte();
-        if (count > 4)
+        if (count > 4 || count <= 0)
             throw new InvalidSongHeaderException($"Song {song.Id:X2} at {Location.ToBankString()} probably points to code.");
 
         Channels = new List<SndChHeader>(count);
