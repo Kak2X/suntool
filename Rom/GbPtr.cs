@@ -24,9 +24,9 @@ public class GbPtr : IEquatable<GbPtr>, IComparable, IComparable<GbPtr>
         RomAddress = romAddress;
     }
 
-    public bool SetLabelIfNew(string v)
+    public bool SetLabelIfNew(string v, string? skipIfStartsWith = null)
     {
-        if (Label != null)
+        if (Label != null && (skipIfStartsWith == null || Label.StartsWith(skipIfStartsWith)))
             return false;
         Label = v;
         return true;

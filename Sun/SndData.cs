@@ -41,7 +41,7 @@ public class SndData : RomData
         var subNo = 0;
         foreach (var x in Subs.OrderBy(x => x.Location))
         {
-            x.Location.SetLabelIfNew($"SndCall_{song.TypeString}_{song.Id:X2}_Ch{song.ChNum}_{subNo:X}");
+            x.Location.SetLabelIfNew($"SndCall_{song.TypeString}_{song.Id:X2}_Ch{song.ChNum}_{subNo:X}", "SndCall_");
             subNo++;
         }
     }
