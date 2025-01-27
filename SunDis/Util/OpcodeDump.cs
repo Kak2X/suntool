@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using SunCommon;
+using System.Diagnostics;
 namespace SunDis;
 
 public class OpcodeDump(SortedSet<RomData> opcodes)

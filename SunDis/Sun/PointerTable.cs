@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using SunCommon;
 namespace SunDis;
 
 public class PointerTable : RomData, IFileSplit
@@ -205,7 +206,7 @@ public class PointerTable : RomData, IFileSplit
 
     private GbPtr[] ReadSongPtrs(Stream s, int songCount)
     {
-        var ptrs = s.ReadWords(songCount);
+        var ptrs = s.ReadUint16s(songCount);
         if (BankTableLocation is null)
         {
             return ptrs.Select(x => GbPtrPool.Create(Location.Bank, x)).ToArray();
@@ -213,7 +214,7 @@ public class PointerTable : RomData, IFileSplit
         else
         {
             s.Seek(BankTableLocation.RomAddress, SeekOrigin.Begin);
-            var banks = s.ReadBytes(songCount);
+            var banks = s.ReadUint8s(songCount);
 
             return Enumerable.Range(0, songCount).Select(i => GbPtrPool.Create(banks[i], ptrs[i])).ToArray();
         }

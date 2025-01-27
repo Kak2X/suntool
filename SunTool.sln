@@ -5,6 +5,10 @@ VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SunDis", "SunDis\SunDis.csproj", "{6E6A1E97-BA63-4D70-89CE-786F270E4EBD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SunCommon", "SunCommon\SunCommon.csproj", "{B373D03B-BA6A-4945-9241-A335BFA7E962}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TbmToSun", "TbmToSun\TbmToSun.csproj", "{5AE5BFDA-61DC-46A9-A233-A6BF9DEA1EA9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{6E6A1E97-BA63-4D70-89CE-786F270E4EBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6E6A1E97-BA63-4D70-89CE-786F270E4EBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6E6A1E97-BA63-4D70-89CE-786F270E4EBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B373D03B-BA6A-4945-9241-A335BFA7E962}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B373D03B-BA6A-4945-9241-A335BFA7E962}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B373D03B-BA6A-4945-9241-A335BFA7E962}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B373D03B-BA6A-4945-9241-A335BFA7E962}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5AE5BFDA-61DC-46A9-A233-A6BF9DEA1EA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AE5BFDA-61DC-46A9-A233-A6BF9DEA1EA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AE5BFDA-61DC-46A9-A233-A6BF9DEA1EA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AE5BFDA-61DC-46A9-A233-A6BF9DEA1EA9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

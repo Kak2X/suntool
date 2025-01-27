@@ -1,4 +1,5 @@
-﻿using SunDis;
+﻿using SunCommon;
+using SunDis;
 
 if (args.Length == 0)
 {
@@ -16,8 +17,7 @@ Options:
                   This can be formatted as an hex ROM address, or in the BANK:ADDR format.
  [--bank-tbl]     Location of the table containing song bank number.
                   Only required for versions of the driver which use bankswitching.
-  --count         Number of songs to read from the pointer table.
-");
+  --count         Number of songs to read from the pointer table.");
 } 
 else
 {

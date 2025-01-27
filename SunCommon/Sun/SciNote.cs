@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-namespace SunDis;
+namespace SunCommon;
 
 public struct SciNote
 {

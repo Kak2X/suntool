@@ -1,4 +1,6 @@
-﻿namespace SunDis;
+﻿using SunCommon;
+
+namespace SunDis;
 
 public abstract class RomData : IEquatable<RomData?>, IComparable
 {

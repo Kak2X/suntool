@@ -1,4 +1,5 @@
-﻿class KArgs
+﻿namespace SunCommon;
+public class KArgs
 {
     private Dictionary<string, List<string>> _args;
     public KArgs(string[] args)

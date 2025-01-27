@@ -1,4 +1,4 @@
-﻿namespace SunDis;
+﻿namespace SunCommon;
 
 public class MultiWriter(string path) : IDisposable
 {
@@ -28,6 +28,7 @@ public class MultiWriter(string path) : IDisposable
             FileHistory.Add(file);
     }
 
+    public void Write(string text) => _sw.Write(text);
     public void WriteLine(string line) => _sw.WriteLine(line);
     public void WriteIndent(string line) => _sw.WriteLine($"\t{line}");
     public void WriteCommand(string command, params string[] args)
