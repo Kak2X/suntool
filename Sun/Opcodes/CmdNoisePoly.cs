@@ -18,7 +18,7 @@ public class CmdNoisePoly : SndOpcode, IMacroLength
     public CmdNoisePoly(GbPtr p, int cmd) : base(p)
     {
         RawValue = cmd;
-        if (TbmValues.Contains((byte)cmd))
+        if (TbmValues.Contains((byte)(cmd & 0xF7)))
             Note = SciNote.CreateFromNoise(cmd);
     }
 

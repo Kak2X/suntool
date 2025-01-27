@@ -5,11 +5,13 @@ public struct SciNote
 {
     public readonly NoteDef Note;
     public readonly int Octave;
+    public readonly int? Lfsr;
 
-    public SciNote(NoteDef note, int octave)
+    public SciNote(NoteDef note, int octave, int? lfsr)
     {
         Note = note;
         Octave = octave;
+        Lfsr = lfsr;
     }
 
     public static SciNote? Create(int rawValue)
@@ -30,24 +32,25 @@ public struct SciNote
         }
 
         var octave = 2 + (int)Math.Floor(rawValue / (decimal)12);
-        return new SciNote(note, octave);
+        return new SciNote(note, octave, null);
     }
 
     public static SciNote? CreateFromNoise(int rawValue)
     {
         Debug.Assert(rawValue >= 0 && rawValue <= 255);
 
+        var lfsr = (rawValue & 0x08) >> 3;
         var noteTriplet = (rawValue >> 4) + 1;
         var noteMul = (rawValue & 7) < 4 ? 0 : ((noteTriplet % 3) * 4);
         var note = 11 - noteMul - (rawValue & 3);
         var octave = 6 - (noteTriplet / 3);
 
-        return new SciNote((NoteDef)note, octave);
+        return new SciNote((NoteDef)note, octave, lfsr);
     }
 
     public static string ToNoteAsm(SciNote? note)
     {
-        return note.HasValue ? $"{note.Value.Note.ToLabel()},{note.Value.Octave}" : "0";
+        return note.HasValue ? $"{note.Value.Note.ToLabel()},{note.Value.Octave}{(note.Value.Lfsr.HasValue ? $",{note.Value.Lfsr}" : "")}" : "0";
     }
 }
 
