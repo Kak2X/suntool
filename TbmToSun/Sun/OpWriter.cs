@@ -129,7 +129,6 @@ $@"{lbl}:
 
                     MacroSub ProcessRows(PrettySong.PrettyRow[] rows)  
                     {
-                        var firstRow = true;
                         var curMacro = new MacroSub(i, chData.Channel, module.WaveMacroLength, defaultCallables[pattern.TrackId]);
                         foreach (var row in rows)
                         {
@@ -219,11 +218,6 @@ $@"{lbl}:
                                     curMacro.WriteCommand("silence", noteLength, true);
                                     break;
                                 case 0:
-                                    // Special case for patterns with no note on their first row.
-                                    // Without this, straight wait would repeat the previously played note.
-                                    // (but it can cause cutoff, unfixable when using subroutines)
-                                    if (firstRow)
-                                        curMacro.WriteCommand("silence ; [FIXME] Originally started with no note set", 0, true);
                                     curMacro.IncWaited(noteLength);
                                     break;
                                 default:
@@ -254,8 +248,6 @@ $@"{lbl}:
 
                             if (silenceLength > 0)
                                 curMacro.WriteCommand("silence", silenceLength, true);
-
-                            firstRow = false;
 
                             // Delayed effects allow the current note to play (with the necessary automatic delay)
                             if (row.DelayedEffect.HasValue)
@@ -417,25 +409,37 @@ $@"{lbl}:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitFlush()
         {
-            Wait(waited);
+            Wait();
             waited = 0;
         }
 
-        public void Wait(int Rows)
+        private void Wait()
         {
+            // If we're waiting at the start of a subroutine, extend the previous note.
+            if (waited > 0 && Body.Length == 0)
+            {
+                for (var i = waited; i > 0; i -= 0xFF)
+                {
+                    lastLength = Math.Min(i, 0xFF);
+                    WriteRawCommand($"continue {lastLength}");
+                }
+            }
             // Same note length used until you change it.
             // Always set a length on the noise channel though, it malfunctions otherwise.
-            if (lastLength != waited || Channel == ChannelType.Ch4 || !lastIsNote)
-                for (var i = Rows; i > 0; i -= 0x7F)
+            else if (lastLength != waited || Channel == ChannelType.Ch4 || !lastIsNote)
+            {
+                for (var i = waited; i > 0; i -= 0x7F)
                 {
                     lastLength = Math.Min(i, 0x7F);
                     WriteRawCommand($"wait {lastLength}");
                 }
+            }
+                
         }
 
         public void WriteCommand(string command, int length = 0, bool isNote = false)
         {
-            Wait(waited);
+            Wait();
             WriteRawCommand(command);
             waited = length;
             lastIsNote = isNote;
