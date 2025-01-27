@@ -124,7 +124,7 @@ class KArgs
                 throw new KeyNotFoundException($"Parameter --{key} requires arguments.");
             return val;
         } 
-        else if (!required)
+        else if (required)
             throw new KeyNotFoundException($"Parameter --{key} is required.");
         else
             return [];
