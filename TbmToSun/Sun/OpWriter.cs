@@ -1,5 +1,7 @@
 ﻿using SunCommon;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -12,38 +14,22 @@ public static partial class OpWriter
     [GeneratedRegex(@"[^\w_]")]
     private static partial Regex LabelNormalizer();
 
-    public static void Write(TbmModule module, MultiWriter output, string? baseTitle, bool sfx)
+    public static void Write(TbmModule module, MultiWriter output, string? baseTitle, bool sfx, string? vibratoPrefix)
     {
-        // Build Vibrato data
-        //var instrToVib = new Dictionary<int, int?>();
-        //var vibratoSets = new List<VibratoSet>();
-        //foreach (var x in module.Instruments)
-        //{
-        //    if (x.SeqPitch.Data.Length == 0)
-        //    {
-        //        instrToVib.Add(x.Id, null);
-        //    } 
-        //    else
-        //    {
-        //        var existing = (int?)null;
-        //        for (var i = 0; i < vibratoSets.Count; i++)
-        //            if (vibratoSets[i].Data.SequenceEqual(x.SeqPitch.Data))
-        //            {
-        //                existing = i;
-        //                break;
-        //            }
-        //
-        //        if (existing != null)
-        //        {
-        //            instrToVib.Add(x.Id, existing);
-        //        }
-        //        else
-        //        {
-        //            instrToVib.Add(x.Id, vibratoSets.Count);
-        //            vibratoSets.Add(new VibratoSet { Data = x.SeqPitch.Data, LoopPoint = x.SeqPitch.LoopEnabled ? x.SeqPitch.LoopIndex : null });
-        //        }
-        //    }
-        //}
+        var vibratoMap = new Dictionary<int, int?>();
+        if (vibratoPrefix != null)
+            foreach (var instr in module.Instruments)
+            {
+                var pos = instr.Name.IndexOf(vibratoPrefix);
+                if (pos != -1)
+                {
+                    var hexDigit = instr.Name.Substring(pos + vibratoPrefix.Length, 2);
+                    if (int.TryParse(hexDigit, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var vibId))
+                        vibratoMap.Add(instr.Id, vibId);
+                    else
+                        Console.WriteLine($"Instrument '{instr.Name}' could not be mapped to a vibrato.");
+                }
+            }
 
         for (var sn = 0; sn < module.Songs.Length; sn++)
         {
@@ -241,6 +227,16 @@ $@"{lbl}:
                                     curMacro.IncWaited(noteLength);
                                     break;
                                 default:
+                                    if (vibratoPrefix != null)
+                                    {
+                                        var curVib = vibratoMap.GetValueOrDefault(row.Instrument);
+                                        if (curVib != curMacro.LastVibrato)
+                                        {
+                                            curMacro.WriteCommand(curVib.HasValue ? $"vibrato_on ${curVib:X2}" : "vibrato_off");
+                                            curMacro.LastVibrato = curVib;
+                                        }
+                                    }
+
                                     string cmd;
                                     if (chData.Channel == ChannelType.Ch4)
                                     {
@@ -355,26 +351,7 @@ $@"{lbl}:
             output.WriteIndent($"dw Sound_WaveSet{i}_\\1");
         for (var i = 0; i < module.Waves.Length; i++)
             output.WriteLine($"Sound_WaveSet{i}_\\1: db {module.Waves[i].Data.FormatByte()} ; ${module.Waves[i].Id:X02} ; {module.Waves[i].Name} \r\n");
-
-        //var vibDef = new StringBuilder();
-        //var vibSub = new StringBuilder();
-        //for (var i = 0; i < vibratoSets.Count; i++)
-        //{
-        //    var vib = vibratoSets[i];
-        //    var lbl = $"Sound_VibratoSet{i}_\\1";
-        //    vibDef.AppendLine($"\tmVbDef {lbl}, ${(vib.LoopPoint ?? vib.Data.Length):X2} ; ${i:X2}");
-        //    vibSub.AppendLine($"{lbl}: db {string.Join(",", vib.Data.Select(x => x - 0x80))}");
-        //    var loopBuf = vib.LoopPoint.HasValue ? "" : "0,"; // Additional entry to indefinitely loop on no-change
-        //    vibSub.AppendLine($"{lbl}: db {loopBuf}VIBCMD_LOOP");
-        //}
-        //output.Write($"Sound_VibratoSetTable:\r\n{vibDef}{vibSub}");
     }
-
-    //private struct VibratoSet
-    //{
-    //    public byte[] Data;
-    //    public int? LoopPoint;
-    //}
 
     private class MacroSub
     {
@@ -392,6 +369,8 @@ $@"{lbl}:
         public int? TerminatorSkip;
         /// <summary>If the sound channel ends with this.</summary>
         public bool TerminatorEnd;
+        /// <summary>Last vibrato used.</summary>
+        public int? LastVibrato;
 
         public MacroSub(int id, ChannelType ch, int? waveMacroLength, bool isCallable)
         {
