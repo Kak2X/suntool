@@ -14,6 +14,6 @@ public class CmdWaitLong : SndOpcode
 
     public override void WriteToDisasm(MultiWriter sw)
     {
-        sw.WriteCommand("wait2", $"{Length}");
+        sw.WriteCommand("continue", $"{Length}");
     }
 }

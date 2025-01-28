@@ -92,7 +92,7 @@ $@"{lbl}:
 "),
                     ChannelType.Ch3 => (
 $@"{lbl}:
-	wave_vol $40
+	wave_vol $C0
 	panning $44
 	wave_id $01
 	;wave_cutoff 0

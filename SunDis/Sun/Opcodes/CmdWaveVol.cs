@@ -8,7 +8,7 @@ public class CmdWaveVol : SndOpcode
     public CmdWaveVol(GbPtr p, Stream s) : base(p)
     {
         // Normalized, making it comparable to CndEnv
-        Vol = s.ReadByte() << 1;
+        Vol = (((s.ReadByte() >> 5) - 1 ^ 0xFF) & 3) << 6;
     }
 
     public override int SizeInRom() => 2;
