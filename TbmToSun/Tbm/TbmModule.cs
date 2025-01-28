@@ -10,11 +10,6 @@ public class TbmModule
     public readonly InstBlock[] Instruments;
     public readonly WaveBlock[] Waves;
 
-    /// <summary>
-    ///     Length of wave channel notes.
-    /// </summary>
-    public readonly int? WaveMacroLength;
-
     public TbmModule(Stream s)
     {
         s.Seek(24, SeekOrigin.Begin);
@@ -42,12 +37,7 @@ public class TbmModule
         // INST
         Instruments = new InstBlock[instrumentCount];
         for (int i = 0; i < instrumentCount; i++)
-        {
-            var inst = new InstBlock(this, s);
-            Instruments[i] = inst;
-            if (inst.Channel == ChannelType.Ch3)
-                WaveMacroLength = inst.GetTimbreLength();
-        }
+            Instruments[i] = new InstBlock(this, s);
 
         // WAVE
         Waves = new WaveBlock[waveCount];
@@ -174,7 +164,7 @@ public class TbmModule
         public class PrettyRow
         {
             public readonly int Note;
-            public readonly int Instrument;
+            public readonly int? Instrument;
             public readonly List<SongBlock.TrackFormat.RowFormat.Effect> Effects = new(3);
             public readonly SongBlock.TrackFormat.RowFormat.Effect? DelayedEffect;
 
@@ -184,7 +174,7 @@ public class TbmModule
             public PrettyRow(SongBlock.TrackFormat.RowFormat src)
             {
                 Note = src.Note;
-                Instrument = src.Instrument;
+                Instrument = src.Instrument > 0 ? src.Instrument - 1 : null;
 
                 // Split between delayed and undelayed effects.
                 // Delayed effects
@@ -358,6 +348,7 @@ public class TbmModule
         public readonly SequenceFormat SeqPitch;
         public readonly SequenceFormat SeqTimbre;
         public readonly SequenceFormat? SeqEnvelope;
+        public readonly int? MacroLength;
 
         public InstBlock(TbmModule parent, Stream s)
         {
@@ -379,6 +370,9 @@ public class TbmModule
             SeqTimbre = new SequenceFormat(s);
             if (parent.Version >= 2)
                 SeqEnvelope = new SequenceFormat(s);
+
+            if (Channel == ChannelType.Ch3)
+                MacroLength = GetTimbreLength();
         }
 
         public class SequenceFormat

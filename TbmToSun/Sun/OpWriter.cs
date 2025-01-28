@@ -120,7 +120,7 @@ $@"{lbl}:
                     if (!chData.Tracks.ContainsKey(i))
                     {
                         Console.WriteLine($"WARNING: Pattern Ch{((int)chData.Channel+1)}.{i} is missing, skipping.");
-                        macroPat.Add(i, new MacroSub(i, chData.Channel, module.WaveMacroLength, false));
+                        macroPat.Add(i, new MacroSub(i, chData.Channel, false));
                         continue;
                     }
                     var pattern = chData.Tracks[i];
@@ -129,9 +129,12 @@ $@"{lbl}:
 
                     MacroSub ProcessRows(PrettySong.PrettyRow[] rows)  
                     {
-                        var curMacro = new MacroSub(i, chData.Channel, module.WaveMacroLength, defaultCallables[pattern.TrackId]);
+                        var curMacro = new MacroSub(i, chData.Channel, defaultCallables[pattern.TrackId]);
                         foreach (var row in rows)
                         {
+                            if (row.Instrument.HasValue)
+                                curMacro.MacroLength = module.Instruments.Length > row.Instrument ? module.Instruments[row.Instrument.Value].MacroLength : null;
+                 
                             var noteLength = ticksPerRow;
                             var silenceLength = 0;
 
@@ -223,7 +226,7 @@ $@"{lbl}:
                                 default:
                                     if (vibratoPrefix != null)
                                     {
-                                        var curVib = vibratoMap.GetValueOrDefault(row.Instrument);
+                                        var curVib = vibratoMap.GetValueOrDefault(row.Instrument.GetValueOrDefault());
                                         if (curVib != curMacro.LastVibrato)
                                         {
                                             curMacro.WriteCommand(curVib.HasValue ? $"vibrato_on ${curVib:X2}" : "vibrato_off");
@@ -364,19 +367,18 @@ $@"{lbl}:
         /// <summary>Last vibrato used.</summary>
         public int? LastVibrato;
 
-        public MacroSub(int id, ChannelType ch, int? waveMacroLength, bool isCallable)
+        public MacroSub(int id, ChannelType ch, bool isCallable)
         {
             Id = id;
             Channel = ch;
             Body = new();
             IsCallable = isCallable;
-            WaveMacroLength = waveMacroLength;
         }
 
         //--
         // Working
 
-        internal int? WaveMacroLength;
+        internal int? MacroLength;
         private bool queueSilence;
         private int waited;
         private int lastLength;
@@ -388,18 +390,18 @@ $@"{lbl}:
         {
             // Quirk in the driver causes ch3 to be continuous.
             // Require explicit silence if one is set.
-            queueSilence = WaveMacroLength.HasValue && Channel == ChannelType.Ch3;
+            queueSilence = MacroLength.HasValue && Channel == ChannelType.Ch3;
         }
 
         public void IncWaited(int amount)
         {
-            if (queueSilence && waited + amount > WaveMacroLength)
+            if (queueSilence && waited + amount > MacroLength)
             {
-                Debug.Assert(WaveMacroLength.HasValue, "WaveMacroLength should be set.");
-                // When we go over the limit, amount will only be what's past FakeWaveLength
-                amount = waited + amount - WaveMacroLength.Value;
+                Debug.Assert(MacroLength.HasValue, "MacroLength should be set.");
+                // When we go over the limit, amount will only be what's past MacroLength
+                amount = waited + amount - MacroLength.Value;
                 // While waited gets capped
-                waited = WaveMacroLength.Value;
+                waited = MacroLength.Value;
                 // And the final waited will be amount
                 WriteSilence();
                 queueSilence = false;
@@ -417,6 +419,7 @@ $@"{lbl}:
         private void Wait()
         {
             // If we're waiting at the start of a subroutine, extend the previous note.
+            // The noise channel also doesn't support standalone waits.
             if (waited > 0 && Body.Length == 0 || (Channel == ChannelType.Ch4 && !lastIsNote))
             {
                 for (var i = waited; i > 0; i -= 0xFF)
