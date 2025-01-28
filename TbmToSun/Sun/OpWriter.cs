@@ -432,13 +432,13 @@ $@"{lbl}:
             // Always set a length on the noise channel though, it malfunctions otherwise.
             else if (lastLength != waited || Channel == ChannelType.Ch4 || !lastIsNote)
             {
-                for (var i = waited; i > 0; i -= 0x7F)
+                var cmd = "wait";
+                for (var i = waited; i > 0; i -= 0x7F, cmd = "continue")
                 {
                     lastLength = Math.Min(i, 0x7F);
-                    WriteRawCommand($"wait {lastLength}");
+                    WriteRawCommand($"{cmd} {lastLength}");
                 }
             }
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
