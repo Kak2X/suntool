@@ -215,7 +215,7 @@ $@"{lbl}:
                             switch (row.Note)
                             {
                                 case 85:
-                                    curMacro.WriteCommand("silence", noteLength, true);
+                                    curMacro.WriteSilence(noteLength);
                                     break;
                                 case 0:
                                     curMacro.IncWaited(noteLength);
@@ -247,7 +247,7 @@ $@"{lbl}:
                             }
 
                             if (silenceLength > 0)
-                                curMacro.WriteCommand("silence", silenceLength, true);
+                                curMacro.WriteSilence(silenceLength);
 
                             // Delayed effects allow the current note to play (with the necessary automatic delay)
                             if (row.DelayedEffect.HasValue)
@@ -383,6 +383,7 @@ $@"{lbl}:
         private bool lastIsNote;
         internal bool Looped;
 
+
         public void QueueSilence()
         {
             // Quirk in the driver causes ch3 to be continuous.
@@ -400,7 +401,7 @@ $@"{lbl}:
                 // While waited gets capped
                 waited = WaveMacroLength.Value;
                 // And the final waited will be amount
-                WriteCommand("silence");
+                WriteSilence();
                 queueSilence = false;
             }
             waited += amount;
@@ -416,7 +417,7 @@ $@"{lbl}:
         private void Wait()
         {
             // If we're waiting at the start of a subroutine, extend the previous note.
-            if (waited > 0 && Body.Length == 0)
+            if (waited > 0 && Body.Length == 0 || (Channel == ChannelType.Ch4 && !lastIsNote))
             {
                 for (var i = waited; i > 0; i -= 0xFF)
                 {
@@ -434,7 +435,16 @@ $@"{lbl}:
                     WriteRawCommand($"wait {lastLength}");
                 }
             }
-                
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteSilence(int length = 0)
+        {
+            if (Channel == ChannelType.Ch4)
+                WriteCommand("envelope $00", length);
+            else
+                WriteCommand("silence", length, true);
         }
 
         public void WriteCommand(string command, int length = 0, bool isNote = false)
