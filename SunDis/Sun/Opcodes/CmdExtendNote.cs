@@ -1,11 +1,11 @@
 ﻿using SunCommon;
 namespace SunDis;
 
-public class CmdWaitLong : SndOpcode
+public class CmdExtendNote : SndOpcode
 {
     public readonly int Length;
 
-    public CmdWaitLong(GbPtr p, Stream s) : base(p)
+    public CmdExtendNote(GbPtr p, Stream s) : base(p)
     {
         Length = s.ReadByte();
     }

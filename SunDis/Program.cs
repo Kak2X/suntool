@@ -27,6 +27,7 @@ else
     var outputPath = xargs.Get("output", true)!;
     var format = xargs.Get("format", true)!.ToUpperInvariant() switch
     {
+        "95" => DataMode.KOF95,
         "96" => DataMode.KOF96,
         "OP" => DataMode.OP,
         _ => throw new Exception("Improper --format parameter."),

@@ -32,7 +32,7 @@ public class OpcodeParser96 : IOpcodeParser
                 0x14 => new CmdChanStop(p, PriorityGroup.SNP_SFXMULTI),
                 0x15 => new CmdWaveCutoff(p, s),
                 0x16 => new CmdChanStop(p, PriorityGroup.SNP_SFX4),
-                0x1A => new CmdWaitLong(p, s),
+                0x1A => new CmdExtendNote(p, s),
                 _ => new CmdErr(p, cmd),
             };
         }

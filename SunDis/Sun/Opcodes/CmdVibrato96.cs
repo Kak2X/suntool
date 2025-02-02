@@ -11,6 +11,6 @@ public class CmdVibrato96 : SndOpcode
 
     public override void WriteToDisasm(MultiWriter sw)
     {
-        sw.WriteCommand("vibrato");
+        sw.WriteCommand("vibrato_on");
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace SunDis;
 
-public class OpcodeParserOp : IOpcodeParser
+public class OpcodeParser95 : IOpcodeParser
 {
     public SndOpcode Parse(Stream s, SongInfo song)
     {
@@ -12,7 +12,7 @@ public class OpcodeParserOp : IOpcodeParser
             cmd -= (int)SndCmdType.SNDCMD_BASE;
             return cmd switch
             {
-                0x03 => new CmdChanStop(p),
+                0x03 => new CmdChanStop(p, noFadeChg: true),
                 0x04 when song.ChPtr == SndChPtrNum.SND_CH3_PTR => new CmdWaveVol(p, s),
                 0x04 => new CmdEnvelope(p, s),
                 0x05 => new CmdLoop(p, s, song),
@@ -26,21 +26,20 @@ public class OpcodeParserOp : IOpcodeParser
                 0x0E => throw new Exception("Attempted to use old CmdCutoff"), //new CmdCutoff(p, s),
                 0x0F => new CmdLockEnv(p),
                 0x10 => new CmdUnlockEnv(p),
-                0x11 => new CmdVibratoOp(p, s),
+                0x11 => new CmdVibrato96(p),
                 0x12 => new CmdClrVibrato(p),
                 0x13 => new CmdWave(p, s),
-                0x14 => new CmdChanStop(p, PriorityGroup.SNP_SFXMULTI),
+                0x14 => new CmdChanStop(p),
                 0x15 => new CmdWaveCutoff(p, s),
-                0x16 => new CmdChanStop(p, PriorityGroup.SNP_SFX4),
+                0x16 => new CmdSpeed(p, s),
                 0x1A => new CmdExtendNote(p, s),
-                0x1C => new CmdSlide(p, s),
                 _ => new CmdErr(p, cmd),
             };
         }
         else if (cmd < (int)SndCmdType.SNDNOTE_BASE)
             return new CmdWait(p, cmd);
         else if (song.ChPtr == SndChPtrNum.SND_CH4_PTR)
-            return new CmdNoisePoly(p, cmd);
+            return song.IsSfx ? new CmdNoisePoly(p, cmd) : new CmdNoisePolyPreset(p, cmd);
         else
             return new CmdNote(p, cmd);
     }
