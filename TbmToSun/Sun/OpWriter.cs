@@ -174,7 +174,10 @@ $@"{lbl}:
                                         curMacro.WriteCommand($"duty_cycle {x.EffectParam}");
                                         break;
                                     case EffectType.SetPanning:
-                                        curMacro.WriteCommand($"panning ${(x.EffectParam << (int)chData.Channel):X2}");
+                                        // 00 (mute), 01 (left), 10 (right), 11 (both)
+                                        var l = x.EffectParam & 0b1;
+                                        var r = x.EffectParam >> 1;
+                                        curMacro.WriteCommand($"panning ${(l << ((int)chData.Channel + 4)) + (r << (int)chData.Channel):X2}");
                                         break;
                                     case EffectType.SetSweep:
                                         curMacro.WriteCommand($"sweep ${x.EffectParam:X2}");
