@@ -1,4 +1,6 @@
-﻿namespace SunDis;
+﻿using SunCommon;
+
+namespace SunDis;
 
 public class OpcodeParser95 : IOpcodeParser
 {
@@ -36,10 +38,13 @@ public class OpcodeParser95 : IOpcodeParser
                 _ => new CmdErr(p, cmd),
             };
         }
+        // The preset allows standalone lengths
+        if (song.ChPtr == SndChPtrNum.SND_CH4_PTR && song.IsSfx)
+            return new CmdNoisePoly(p, cmd, s);
         else if (cmd < (int)SndCmdType.SNDNOTE_BASE)
             return new CmdWait(p, cmd);
         else if (song.ChPtr == SndChPtrNum.SND_CH4_PTR)
-            return song.IsSfx ? new CmdNoisePoly(p, cmd) : new CmdNoisePolyPreset(p, cmd);
+            return new CmdNoisePolyPreset(p, cmd);
         else
             return new CmdNote(p, cmd);
     }

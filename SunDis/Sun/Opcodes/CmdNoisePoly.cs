@@ -2,11 +2,11 @@
 
 namespace SunDis;
 
-public class CmdNoisePoly : SndOpcode, IMacroLength
+public class CmdNoisePoly : SndOpcode
 {
     public readonly SciNote? Note;
     public readonly int RawValue;
-    public int? Length { get; set; }
+    public readonly int? Length;
 
     internal static readonly byte[] TbmValues = 
     [
@@ -17,14 +17,20 @@ public class CmdNoisePoly : SndOpcode, IMacroLength
         0x17,0x16,0x15,0x14,0x07,0x06,0x05,0x04,0x03,0x02,0x01,0x00,
     ];
 
-    public CmdNoisePoly(GbPtr p, int cmd) : base(p)
+    public CmdNoisePoly(GbPtr p, int cmd, Stream s) : base(p)
     {
         RawValue = cmd;
         if (TbmValues.Contains((byte)(cmd & 0xF7)))
             Note = SciNote.CreateFromNoise(cmd);
+        Length = s.ReadUint8();
+        if (Length > 0x7F)
+        {
+            Length = null;
+            s.Seek(-1, SeekOrigin.Current);
+        }
     }
 
-    public override int SizeInRom() => 1;
+    public override int SizeInRom() => 1 + (Length.HasValue? 1 : 0);
 
     public override void WriteToDisasm(MultiWriter sw)
     {

@@ -36,10 +36,10 @@ public class OpcodeParser96 : IOpcodeParser
                 _ => new CmdErr(p, cmd),
             };
         }
+        if (song.ChPtr == SndChPtrNum.SND_CH4_PTR)
+            return new CmdNoisePoly(p, cmd, s);
         else if (cmd < (int)SndCmdType.SNDNOTE_BASE)
             return new CmdWait(p, cmd);
-        else if (song.ChPtr == SndChPtrNum.SND_CH4_PTR)
-            return new CmdNoisePoly(p, cmd);
         else
             return new CmdNote(p, cmd);
     }
