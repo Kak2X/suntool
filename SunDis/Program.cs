@@ -12,7 +12,7 @@ Options:
   --rom           The path to the ROM file that is to be parsed.
   --output        Path to the output folder.
                   This will be created, if missing.
-  --format        Song format. (96 or OP)
+  --format        Song format. (95, 96 or OP)
   --ptr-tbl       Location of the sound header pointer table with song data.
                   This can be formatted as an hex ROM address, or in the BANK:ADDR format.
  [--bank-tbl]     Location of the table containing song bank number.
