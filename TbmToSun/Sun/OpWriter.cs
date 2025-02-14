@@ -1,6 +1,5 @@
 ﻿using SunCommon;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -16,6 +15,28 @@ public static partial class OpWriter
 
     public static void Write(TbmModule module, MultiWriter output, string? baseTitle, bool sfx, string? vibratoPrefix)
     {
+        // Initialize song_list.asm
+        var scriptSongId = 1;
+        output.ChangeFile("data/song_list.asm",
+            () => @"; =============== Sound_SndListTable ===============
+; Table of sound assignments, ordered by ID.
+Sound_SndListTable_\1:
+IF \2
+Sound_SndListTable_Main:
+ENDC
+	dsong Sound_SndListTable_Main, Sound_StartNothing_\1 ; $80
+",
+            (file) =>
+            {
+                // Autodetect the song ID from how many times "dsong" appears at the start of a line.
+                scriptSongId = 0;
+                foreach (var line in file.Split("\r\n"))
+                    if (line.TrimStart().StartsWith("dsong"))
+                        scriptSongId++;
+                // Remove the .end: at the end of the file
+                return file[..file.LastIndexOf(".end:")];
+            });
+
         var vibratoMap = new Dictionary<int, int?>();
         if (vibratoPrefix != null)
             foreach (var instr in module.Instruments)
@@ -56,6 +77,25 @@ public static partial class OpWriter
 $@"SndHeader_{title}:
 	db ${chCount:X2} ; Number of channels
 {bufCh}{bufData}");
+
+            // Autodetect the init code
+            string initCode;
+            /*if (scriptSongId == 0x0C)
+                initCode = "Sound_PauseAll";
+            else if (scriptSongId == 0x0D)
+                initCode = "Sound_UnpauseAll";
+            else */
+            if (!sfx)
+                initCode = "Sound_StartNewBGM";
+            else if (song.Ch1 != null)
+                initCode = "Sound_StartNewSFX1234";
+            else if (song.Ch2 != null || song.Ch3 != null)
+                initCode = "Sound_StartNewSFX234";
+            else
+                initCode = "Sound_StartNewSFX4";
+            output.ChangeFile("data/song_list.asm", append: true);
+            output.WriteLine($"\tdsong SndHeader_{title}, {initCode}_\\1 ; ${(scriptSongId + 0x80):X02}");
+            scriptSongId++;
 
             void Emit(PrettySong.PrettyChannel? chData)
             {
@@ -349,6 +389,13 @@ $@"{lbl}:
             output.WriteIndent($"dw Sound_WaveSet{i}_\\1");
         for (var i = 0; i < module.Waves.Length; i++)
             output.WriteLine($"Sound_WaveSet{i}_\\1: db {module.Waves[i].Data.FormatByte()} ; ${module.Waves[i].Id:X02} ; {module.Waves[i].Name} \r\n");
+
+        output.ChangeFile("data/song_list.asm", append: true);
+        output.WriteLine(".end:");
+
+        output.ChangeFile("main.asm", log: false, append: true);
+        foreach (var x in output.FileHistory)
+            output.WriteLine($"INCLUDE \"{x.Replace('\\', '/')}\"");
     }
 
     private class MacroSub
