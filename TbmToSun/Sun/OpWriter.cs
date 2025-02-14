@@ -17,7 +17,7 @@ public static partial class OpWriter
     {
         // Initialize song_list.asm
         var scriptSongId = 1;
-        output.ChangeFile("data/song_list.asm",
+        output.ChangeFile("driver/data/song_list.asm",
             () => @"; =============== Sound_SndListTable ===============
 ; Table of sound assignments, ordered by ID.
 Sound_SndListTable_\1:
@@ -61,7 +61,7 @@ ENDC
                 : (module.Songs.Length == 1 ? baseTitle : $"{baseTitle}_N{sn}");
             var title = (sfx ? "SFX_" : "BGM_") + songName;
 
-            output.ChangeFile($"{(sfx ? "sfx/sfx_" : "bgm/bgm_")}{songName}.asm");
+            output.ChangeFile($"driver/{(sfx ? "sfx/sfx_" : "bgm/bgm_")}{songName}.asm");
             
             var chCount = 0;
             var bufCh = "";
@@ -93,7 +93,7 @@ $@"SndHeader_{title}:
                 initCode = "Sound_StartNewSFX234";
             else
                 initCode = "Sound_StartNewSFX4";
-            output.ChangeFile("data/song_list.asm", append: true);
+            output.ChangeFile("driver/data/song_list.asm", append: true);
             output.WriteLine($"\tdsong SndHeader_{title}, {initCode}_\\1 ; ${(scriptSongId + 0x80):X02}");
             scriptSongId++;
 
@@ -382,7 +382,7 @@ $@"{lbl}:
             }
         }
 
-        output.ChangeFile("data/waves.asm");
+        output.ChangeFile("driver/data/waves.asm");
 
         output.WriteLine("Sound_WaveSetPtrTable_\\1:");
         for (var i = 0; i < module.Waves.Length; i++)
@@ -390,10 +390,10 @@ $@"{lbl}:
         for (var i = 0; i < module.Waves.Length; i++)
             output.WriteLine($"Sound_WaveSet{i}_\\1: db {module.Waves[i].Data.FormatByte()} ; ${module.Waves[i].Id:X02} ; {module.Waves[i].Name} \r\n");
 
-        output.ChangeFile("data/song_list.asm", append: true);
+        output.ChangeFile("driver/data/song_list.asm", append: true);
         output.WriteLine(".end:");
 
-        output.ChangeFile("main.asm", log: false, append: true);
+        output.ChangeFile("driver/main.asm", log: false, append: true);
         foreach (var x in output.FileHistory)
             output.WriteLine($"INCLUDE \"{x.Replace('\\', '/')}\"");
     }
