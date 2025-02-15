@@ -26,7 +26,7 @@ public class SndHeader : RomData, IFileSplit
     public string GetFilename()
     {
         var s = IsSfx ? "sfx" : "bgm";
-        return $"{s}\\{s}_{Id:x2}.asm";
+        return $"driver/{s}/{s}_{Id:x2}.asm";
     }
 
     public override int SizeInRom()

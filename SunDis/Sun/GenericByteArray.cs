@@ -14,7 +14,7 @@ public class GenericByteArray : RomData, IFileSplit
         s.Read(Data, 0, length);
     }
 
-    public string GetFilename() => $"padding/{Location.ToDefaultLabel()}.asm";
+    public string GetFilename() => $"driver/padding/{Location.ToDefaultLabel()}.asm";
 
     public override int SizeInRom() => Data.Length;
 

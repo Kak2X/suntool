@@ -2,7 +2,7 @@
 using SunCommon;
 namespace SunDis;
 
-public class PointerTable : RomData, IFileSplit
+public class PointerTable : RomData
 {
     public readonly List<SndHeader> Songs;
     public readonly GbPtr? BankTableLocation;
@@ -44,7 +44,7 @@ public class PointerTable : RomData, IFileSplit
         var romData = BuildOpcodeMap();
         FillGaps(romData, mode);
         MergeMacroLength(romData);
-        return new OpcodeDump(romData);
+        return new OpcodeDump(this, romData);
     }
 
     private SortedSet<RomData> BuildOpcodeMap()
@@ -241,6 +241,6 @@ public class PointerTable : RomData, IFileSplit
 
     public string GetFilename()
     {
-        return "sound_headers.asm";
+        return "driver/sound_headers.asm";
     }
 }
