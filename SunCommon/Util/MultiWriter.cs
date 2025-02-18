@@ -10,24 +10,21 @@ public class MultiWriter(string path) : IDisposable
     public void ChangeFile(string file, bool log = true, bool append = false)
     {
         var fullPath = PrepareNextFile(path, file);
-        var exists = File.Exists(fullPath);
         ChangeFile(fullPath, append);
-        if (!exists && log)
+        if (log)
             FileHistory.Add(file);
     }
 
     public void ChangeFile(string file, Func<string> onCreate, Func<string, string> onAppend, bool log = true)
     {
         var fullPath = PrepareNextFile(path, file);
-        var exists = File.Exists(fullPath);
-
-        var initial = exists
+        var initial = File.Exists(fullPath)
             ? onAppend?.Invoke(File.ReadAllText(fullPath)) 
             : onCreate?.Invoke();
         ChangeFile(fullPath, false);
         if (initial != null)
             _sw.Write(initial);
-        if (!exists && log)
+        if (log)
             FileHistory.Add(file);
     }
 

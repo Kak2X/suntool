@@ -16,6 +16,9 @@ public static partial class OpWriter
 
     public static void Write(TbmModule module, MultiWriter output, string? baseTitle, bool sfx, string? vibratoPrefix)
     {
+        // Import paths, to append to "song_includes.txt"
+        var songPaths = new List<string>();
+
         // Initialize song_list.asm
         var scriptSongId = 1;
         output.ChangeFile("driver/data/song_list.asm",
@@ -55,7 +58,9 @@ public static partial class OpWriter
                 : (module.Songs.Length == 1 ? baseTitle : $"{baseTitle}_N{sn}");
             var title = (sfx ? "SFX_" : "BGM_") + songName;
 
-            output.ChangeFile($"driver/{(sfx ? "sfx/sfx_" : "bgm/bgm_")}{songName}.asm");
+            var songPath = $"driver/{(sfx ? "sfx/sfx_" : "bgm/bgm_")}{songName}.asm";
+            songPaths.Add(songPath);
+            output.ChangeFile(songPath);
             
             var chCount = 0;
             var bufCh = "";
@@ -382,8 +387,8 @@ $@"{lbl}:
         output.ChangeFile("driver/data/song_list.asm", append: true);
         output.WriteLine(SndListEndMarker);
 
-        output.ChangeFile("driver/main.asm", log: false, append: true);
-        foreach (var x in output.FileHistory)
+        output.ChangeFile("driver/song_includes.txt", append: true);
+        foreach (var x in songPaths)
             output.WriteLine($"INCLUDE \"{x.Replace('\\', '/')}\"");
     }
 
