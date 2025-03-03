@@ -417,6 +417,7 @@ $@"{lbl}:
             Channel = ch;
             Body = new();
             IsCallable = isCallable;
+            LastVibrato = -1;
         }
 
         //--
