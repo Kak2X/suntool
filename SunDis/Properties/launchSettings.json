@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "SunDis": {
+      "commandName": "Project",
+      "commandLineArgs": "--rom C:\\publish\\_temp\\oporg.gb --output C:\\publish\\_temp\\out --format OP --ptr-tbl 0D:4B08 --count 134 \r\n"
+      //"commandLineArgs": "--rom C:\\publish\\_temp\\kof96.gb --output C:\\publish\\_temp\\out --format 96 --ptr-tbl 1f:46a5 --count 52 \r\n"
+    }
+  }
+}

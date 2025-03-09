@@ -1,6 +1,20 @@
-﻿namespace SunCommon;
+﻿using System.Runtime.CompilerServices;
 
-public class MultiWriter(string path) : IDisposable
+namespace SunCommon;
+
+public interface IMultiWriter : IDisposable
+{
+    void ChangeFile(string file, bool log = true, bool append = false);
+    void ChangeFile(string file, Func<string> onCreate, Func<string, string> onAppend, bool log = true);
+    void Write(string text);
+    void WriteLine(string line);
+    void WriteIndent(string line);
+    void WriteCommand(string command, params string?[] args);
+    string MakeIndent(string line);
+    string MakeCommand(string command, params string?[] args);
+}
+
+public class MultiWriter(string path) : IMultiWriter
 {
     private FileStream _fs = null!;
     private StreamWriter _sw = null!;
@@ -19,7 +33,7 @@ public class MultiWriter(string path) : IDisposable
     {
         var fullPath = PrepareNextFile(path, file);
         var initial = File.Exists(fullPath)
-            ? onAppend?.Invoke(File.ReadAllText(fullPath)) 
+            ? onAppend?.Invoke(File.ReadAllText(fullPath))
             : onCreate?.Invoke();
         ChangeFile(fullPath, false);
         if (initial != null)
@@ -28,16 +42,13 @@ public class MultiWriter(string path) : IDisposable
             FileHistory.Add(file);
     }
 
-    public void Write(string text) => _sw.Write(text);
-    public void WriteLine(string line) => _sw.WriteLine(line);
-    public void WriteIndent(string line) => _sw.WriteLine($"\t{line}");
-    
-    public void WriteCommand(string command, params string[] args)
+    public string MakeIndent(string line) => $"\t{line}\r\n";
+    public string MakeCommand(string command, params string?[] args)
     {
         // Split between actual args and everything past the first comment
         var comments = "";
         for (var i = 0; i < args.Length; i++)
-            if (args[i].StartsWith(';'))
+            if (args[i]?.StartsWith(';') ?? false)
             {
                 comments = " " + string.Join(" ", args[i..]);
                 args = args[..i];
@@ -45,8 +56,13 @@ public class MultiWriter(string path) : IDisposable
             }
 
         var strArgs = args.Length > 0 ? $" {string.Join(", ", args)}" : string.Empty;
-        _sw.WriteLine($"\t{command}{strArgs}{comments}"); // .PadRight(10)
+        return $"\t{command}{strArgs}{comments}\r\n";
     }
+
+    public void Write(string text) => _sw.Write(text);
+    public void WriteLine(string line) => _sw.WriteLine(line);
+    public void WriteIndent(string line) => _sw.Write(MakeIndent(line));
+    public void WriteCommand(string command, params string?[] args) => _sw.Write(MakeCommand(command, args));
 
     private string PrepareNextFile(string path, string file)
     {

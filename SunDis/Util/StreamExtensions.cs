@@ -10,4 +10,11 @@ public static class StreamExtensions
         var ptr = s.ReadUint16();
         return GbPtrPool.Create(bank, ptr);
     }
+
+    public static GbPtr ReadFarPtr(this Stream s)
+    {
+        var bank = s.ReadUint8();
+        var ptr = s.ReadUint16();
+        return GbPtrPool.Create(bank, ptr);
+    }
 }

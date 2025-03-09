@@ -1,7 +1,45 @@
-﻿namespace SunCommon.Sun
+﻿namespace SunCommon
 {
     public static class Consts
     {
+        public static readonly byte[] TbmNoiseNotes =
+        [
+            0xD7,0xD6,0xD5,0xD4,0xC7,0xC6,0xC5,0xC4,0xB7,0xB6,0xB5,0xB4,
+            0xA7,0xA6,0xA5,0xA4,0x97,0x96,0x95,0x94,0x87,0x86,0x85,0x84,
+            0x77,0x76,0x75,0x74,0x67,0x66,0x65,0x64,0x57,0x56,0x55,0x54,
+            0x47,0x46,0x45,0x44,0x37,0x36,0x35,0x34,0x27,0x26,0x25,0x24,
+            0x17,0x16,0x15,0x14,0x07,0x06,0x05,0x04,0x03,0x02,0x01,0x00,
+        ];
+
+        public static readonly byte[][] NotePresets95 =
+        [
+            [0x00,0x00],
+            [0x51,0x36],
+            [0x52,0x24],
+            [0x31,0x21],
+            [0x53,0x11],
+            [0x53,0x11],
+            [0x53,0x11],
+            [0x52,0x36],
+            [0x52,0x36],
+            [0x52,0x36],
+        ];
+
+        public const string SndMainBegin = @"mSOUNDBANK 03, 1 ; Main bank, as the last one for GBS compat (TODO: autodivide)
+;   mSOUNDBANK 02
+;   mSOUNDBANK 01
+";
+
+        public const string VibratoTblBegin = @"; =============== Sound_VibratoSetTable ===============
+; Sets of vibrato data, usable by all channels.
+Sound_VibratoSetTable_\1: 
+";
+
+        public const string WaveTblBegin = @"; =============== Sound_WaveSetPtrTable ===============
+; Sets of Wave data for channel 3, copied directly to the rWave registers.
+Sound_WaveSetPtrTable_\1:
+";
+
         public const string SndListBegin = @"; =============== Sound_SndListTable ===============
 ; Table of sound assignments, ordered by ID.
 Sound_SndListTable_\1:

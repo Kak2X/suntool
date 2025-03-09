@@ -1,6 +1,6 @@
 ﻿namespace SunDis;
 
-// Enforces receiving the identical GbPtr object for the same RomAddress.ù
+// Enforces receiving the identical GbPtr object for the same RomAddress.
 // This allows editing labels from the other side, useful when handling call and loop commands.
 // Shouldn't be static but oh well...
 public static class GbPtrPool

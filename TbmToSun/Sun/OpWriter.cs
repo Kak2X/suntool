@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using static SunCommon.Sun.Consts;
+using static SunCommon.Consts;
 using static TbmToSun.TbmModule;
 
 namespace TbmToSun;
@@ -382,7 +382,7 @@ $@"{lbl}:
         for (var i = 0; i < module.Waves.Length; i++)
             output.WriteIndent($"dw Sound_WaveSet{i}_\\1");
         for (var i = 0; i < module.Waves.Length; i++)
-            output.WriteLine($"Sound_WaveSet{i}_\\1: db {module.Waves[i].Data.FormatByte()} ; ${module.Waves[i].Id:X02} ; {module.Waves[i].Name} \r\n");
+            output.WriteLine($"Sound_WaveSet{i}_\\1: db {module.Waves[i].Data.AsHexBytes()} ; ${module.Waves[i].Id:X02} ; {module.Waves[i].Name} \r\n");
 
         output.ChangeFile("driver/data/song_list.asm", append: true);
         output.WriteLine(SndListEndMarker);

@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Sun\Enums\**" />
+    <EmbeddedResource Remove="Sun\Enums\**" />
+    <None Remove="Sun\Enums\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SunCommon\SunCommon.csproj" />
   </ItemGroup>
 
