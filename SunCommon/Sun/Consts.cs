@@ -25,6 +25,12 @@
             [0x52,0x36],
         ];
 
+        // Default free space in a bank. (for TbmToSun, ignores vibrato & wave since they get written to)
+        public const int FreeSpaceBase = 0x8000 - 0x49eb;
+
+        // Default free space in a bank. (for SunDis, accounts for vibrato & wave)
+        public const int FreeSpaceSongOnly = 0x8000 - 0x4c57;
+
         public const string SndMainBegin = @"mSOUNDBANK 03, 1 ; Main bank, as the last one for GBS compat (TODO: autodivide)
 ;   mSOUNDBANK 02
 ;   mSOUNDBANK 01

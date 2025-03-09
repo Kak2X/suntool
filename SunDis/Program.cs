@@ -1,5 +1,6 @@
 ﻿using SunCommon;
 using SunDis;
+using System.Globalization;
 using System.IO;
 
 if (args.Length == 0)
@@ -19,7 +20,12 @@ Options:
                   This can be formatted as an hex ROM address, or in the BANK:ADDR format.
  [--bank-tbl]     Location of the table containing song bank number. (OP only)
                   If not specified, it's assumed to come right after the pointer table.
-  --count         Number of songs to read from the pointer table.");
+  --count         Number of songs to read from the pointer table.
+ [--split-on]     Free space in the sound driver bank, to help split song across them.
+                  If not specified, a default value will be used.
+                  This should be formatted as an hex number.
+ [--sorted]       If set, outputs the data in ROM order to help with bit-perfect builds.
+                  Disabled by default, as it's incompatible with the bank splitting feature.");
 } 
 else
 {
@@ -44,6 +50,9 @@ else
         if (x != null)
             bankTbl = GbPtrPool.Create(x);
     }
+    var splitOnStr = xargs.Get("split-on");
+    var splitOn = splitOnStr != null ? int.Parse(splitOnStr, NumberStyles.HexNumber) : Consts.FreeSpaceSongOnly;
+    var useSorted = xargs.Exists("sorted");
 
     using var fs = new FileStream(sourceFile, FileMode.Open);
     fs.Seek(ptrTable.RomAddress, SeekOrigin.Begin);
@@ -52,5 +61,8 @@ else
     // No Vibrato or Wave dump
     using var sw = new MultiWriter(outputPath);
     res.Playlist.Mode = DataMode.OPEx; // Force disassembly-friendly main.asm
-    new SortedDataWriter(sw, res).WriteDisassembly();
+    Console.WriteLine($"Writing the disassembly files to \"{outputPath}\"...");
+    var writer = useSorted ? new SortedDataWriter(sw, res) : new DataWriter(sw, res.Playlist, splitOn);
+    writer.WriteDisassembly();
+    Console.WriteLine("Done.");
 }
