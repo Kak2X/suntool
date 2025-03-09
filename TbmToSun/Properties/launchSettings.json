@@ -2,7 +2,7 @@
   "profiles": {
     "TbmToSun": {
       "commandName": "Project",
-      "commandLineArgs": "--i \"C:\\soundtemp\\src\\quarth_3_1_edit_vibrato.tbm\" --o \"C:\\soundtemp\" --title \"0F\" --vibrato \"vibset\""
+      "commandLineArgs": "--i \"C:\\soundtemp\\convert_src_mini.csv\""
     }
   }
 }
