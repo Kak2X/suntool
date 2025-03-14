@@ -43,7 +43,7 @@ public struct SciNote
         return new SciNote(note, octave, null);
     }
 
-    public static SciNote? CreateFromNoise(int rawValue)
+    public static SciNote CreateFromNoise(int rawValue)
     {
         Debug.Assert(rawValue >= 0 && rawValue <= 255);
 

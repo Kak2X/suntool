@@ -46,7 +46,7 @@ public abstract class OpcodeParser(Stream s)
         };
     }
 
-    public SndOpcode CmdEnaCh() => new CmdEnaCh
+    public SndOpcode CmdPanning() => new CmdPanning
     {
         Pan = s.ReadByte()
     };
@@ -102,7 +102,7 @@ public abstract class OpcodeParser(Stream s)
         {
             return new CmdNoisePoly
             {
-                Note = SciNote.CreateFromNoise(cmd)!.Value,
+                Note = SciNote.CreateFromNoise(cmd),
                 Length = length
             };
         }

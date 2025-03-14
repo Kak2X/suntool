@@ -1,10 +1,10 @@
 ﻿namespace SunCommon;
 
-public class CmdNoisePolyPreset : SndOpcode, IMacroLength
+public class CmdNoisePolyPreset : SndOpcode, IMacroLength, ICmdNote
 {
     public int PresetId { get; set; }
     public int? Length { get; set; }
-    public override int SizeInRom() => 1 + (Length.HasValue ? 1 : 0);
+    public override int SizeInRom() => 1 + CmdWait.MakeSize(Length);
     public override void WriteToDisasm(IMultiWriter sw)
     {
         var args = new List<string>

@@ -1,6 +1,6 @@
 ﻿namespace SunCommon;
 
-public class CmdEnaCh : SndOpcode
+public class CmdPanning : SndOpcode
 {
     public int Pan { get; set; }
     public override int SizeInRom() => 2;

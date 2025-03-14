@@ -18,7 +18,7 @@ public class OpcodeParser95(Stream s) : OpcodeParser(s)
                 0x06 => CmdFineTune(),
                 0x07 => CmdLoopCnt(),
                 0x08 => CmdSweep(),
-                0x09 => CmdEnaCh(),
+                0x09 => CmdPanning(),
                 0x0C => CmdCall(),
                 0x0D => CmdRet(),
                 0x0E when song.SoundChannelPtr < SndChPtrNum.SND_CH3_PTR => CmdDutyCycle(),
