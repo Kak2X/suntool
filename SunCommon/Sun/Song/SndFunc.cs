@@ -1,4 +1,6 @@
-﻿namespace SunCommon;
+﻿using System.Runtime.CompilerServices;
+
+namespace SunCommon;
 
 public class SndFunc : IRomData
 {
@@ -9,4 +11,11 @@ public class SndFunc : IRomData
     public string? GetLabel() => null;
     public int SizeInRom() => 0;
     public void WriteToDisasm(IMultiWriter sw) {}
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void AddOpcode(SndOpcode op)
+    {
+        op.Parent = this;
+        Opcodes.Add(op);
+    }
 }

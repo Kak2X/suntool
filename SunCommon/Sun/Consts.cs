@@ -38,13 +38,11 @@
 
         public const string VibratoTblBegin = @"; =============== Sound_VibratoSetTable ===============
 ; Sets of vibrato data, usable by all channels.
-Sound_VibratoSetTable_\1: 
-";
+Sound_VibratoSetTable_\1:";
 
         public const string WaveTblBegin = @"; =============== Sound_WaveSetPtrTable ===============
 ; Sets of Wave data for channel 3, copied directly to the rWave registers.
-Sound_WaveSetPtrTable_\1:
-";
+Sound_WaveSetPtrTable_\1:";
 
         public const string SndListBegin = @"; =============== Sound_SndListTable ===============
 ; Table of sound assignments, ordered by ID.

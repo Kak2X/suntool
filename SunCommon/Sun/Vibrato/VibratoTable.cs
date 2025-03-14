@@ -12,11 +12,23 @@ public class VibratoTable : IRomData
     {
         if (!_optimized)
             Optimize();
+        Recount();
+
+        sw.ChangeFile("driver/data/vibrato.asm");
         sw.WriteLine(Consts.VibratoTblBegin);
         foreach (var x in _vibratos)
             sw.WriteWithLabel(x);
         foreach (var x in _vibratos.Select(x => x.Data).Distinct())
             sw.WriteWithLabel(x);
+    }
+
+    private void Recount()
+    {
+        var done = new ObjectSet();
+        var i = 0;
+        foreach (var x in _vibratos)
+            if (done.Add(x.Data))
+                x.Data.Id = i++;
     }
 
     private void Optimize()
@@ -33,23 +45,21 @@ public class VibratoTable : IRomData
                 var haystack = toCheck[j];
                 if (haystack.Offsets.EndsWith(needle.Offsets))
                 {
-                    // Mark as reference
-                    //needle.RefId = j;
-                    //needle.Offsets = null;
-
+                    // Needle can be deleted
                     toCheck.RemoveAt(i);
+
                     i--; // Balance
                     j--; // j always > i
 
                     // Repoint all uses (needle will become unreferenced)
-                    var pos = haystack.Offsets.Length - needle.Offsets.Length;
+                    var posDiff = haystack.Offsets.Length - needle.Offsets.Length;
                     for (var k = 0; k < _vibratos.Count; k++)
                     {
                         if (_vibratos[k].Data == needle)
                         {
                             _vibratos[k].Data = haystack;
-                            _vibratos[k].StartPoint += pos;
-                            _vibratos[k].LoopPoint += pos;
+                            _vibratos[k].StartPoint += posDiff;
+                            _vibratos[k].LoopPoint += posDiff;
                         }
                     }
                 }
@@ -60,15 +70,37 @@ public class VibratoTable : IRomData
     public VibratoItem this[int index] => _vibratos[index].Data;
     public int Push(byte[] data, int loopPoint = 0)
     {
+        if (data.Length == 0)
+            throw new ArgumentException("Empty vibrato passed in.", nameof(data));
+        if (loopPoint >= data.Length)
+        {
+            Console.WriteLine($"Vibrato has bad loop point. ({loopPoint} >= {data.Length}), adjusted to {data.Length-1}");
+            loopPoint = data.Length - 1;
+        }
+
         // Try find existing
         for (var i = 0; i < _vibratos.Count; i++)
             if (_vibratos[i].LoopPoint == loopPoint && data.SequenceEqual(_vibratos[i].Data.Offsets))
                 return i;
+       
         // Add if not found
         var toAdd = new VibratoDef { Id = _vibratos.Count, Data = new VibratoItem { Offsets = data }, LoopPoint = loopPoint };
         _vibratos.Add(toAdd);
         _optimized = false;
 
         return toAdd.Id;
+    }
+
+    public int FullSizeInRom()
+    {
+        var res = SizeInRom();
+        var done = new ObjectSet();
+        foreach (var x in _vibratos)
+        {
+            res += x.SizeInRom();
+            if (done.Add(x.Data))
+                res += x.Data.SizeInRom();
+        }
+        return res;
     }
 }

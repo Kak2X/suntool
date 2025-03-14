@@ -9,19 +9,34 @@ if (args.Length == 0)
 Usage:
   TbmToSun [options]
 Options:
-  --i      The path to the instruction file.");
+  --i      The path to the sheet file.");
 }
 else
 {
     var xargs = new KArgs(args);
 
-    var instrPath = xargs.Get("i", true)!;
-    if (!Path.Exists(instrPath))
-        Console.WriteLine($"\"{instrPath}\" does not exist.");
+    var sheetPath = xargs.Get("i", true)!;
+    if (!Path.Exists(sheetPath))
+        Console.WriteLine($"\"{sheetPath}\" does not exist.");
     else
     {
-        var instrFile = new InstructionSheet(instrPath);
-        using var writer = new MultiWriter(instrFile.OutputPath);
-        OpWriter.Write(instrFile.Rows[0].Module, writer, instrFile.Rows[0].Title, instrFile.Rows[0].IsSfx, "vibset");
+        Console.WriteLine($"Parsing sheet file & TBM files...");
+        var sheet = new InstructionSheet(sheetPath);
+
+        Console.WriteLine($"Converting...");
+        var res = new TbmConversion(sheet);
+        var extraSize = res.Vibratos.FullSizeInRom() + res.Waves.FullSizeInRom();
+
+        Console.WriteLine($"Writing the disassembly files to \"{sheet.OutputPath}\"...");
+        using var sw = new MultiWriter(sheet.OutputPath);
+        var writer = new DataWriter(sw, res.PtrTbl, (sheet.SplitOn ?? Consts.FreeSpaceBase) - extraSize);
+        writer.WriteDisassembly();
+
+        Console.WriteLine($"Writing vibratos...");
+        res.Vibratos.WriteToDisasm(sw);
+        Console.WriteLine($"Writing waves...");
+        res.Waves.WriteToDisasm(sw);
+
+        Console.WriteLine("Done.");
     }
 }

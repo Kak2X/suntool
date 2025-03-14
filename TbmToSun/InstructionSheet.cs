@@ -6,34 +6,38 @@ namespace TbmToSun
     {
         public readonly DataMode OutputFormat;
         public readonly string OutputPath;
+        public readonly int? SplitOn;
         public readonly List<InstructionSong> Rows = [];
         public InstructionSheet(string file)
         {
             var cmds = File.ReadAllLines(file);
-            for (int i = 0, rowNum = 0; i < cmds.Length; i++)
+            for (var i = 0; i < cmds.Length; i++)
             {
                 var cmd = cmds[i].Trim();
                 if (!cmd.StartsWith(';'))
                 {
-                    if (rowNum == 0)
-                        OutputFormat = Enum.Parse<DataMode>(cmd);
-                    else if (rowNum == 1)
-                        OutputPath = cmd;
+                    if (cmd.StartsWith("Format="))
+                        OutputFormat = Enum.Parse<DataMode>(cmd.Split('=')[1]);
+                    else if (cmd.StartsWith("OutputPath="))
+                        OutputPath = cmd.Split('=')[1];
+                    else if (cmd.StartsWith("SplitOn="))
+                        SplitOn = int.Parse(cmd.Split('=')[1]);
                     else
                     {
                         var row = cmds[i].Split(",").Select(x => x.Trim()).ToArray();
                         if (row.Length > 1)
                         {
+                            Console.WriteLine($"-> {row[0]}");
                             using var input = new FileStream(row[0], FileMode.Open, FileAccess.Read);
                             Rows.Add(new InstructionSong
                             {
+                                Path = row[0],
                                 Module = new TbmModule(input),
                                 IsSfx = int.Parse(row[1]) != 0,
-                                Title = row.Length > 2 ? row[2] : null
+                                Title = row.Length > 2 ? row[2] : Path.GetFileNameWithoutExtension(row[0]),
                             });
                         }
                     }
-                    rowNum++;
                 }
             }
             if (OutputPath == null || Rows.Count == 0)
@@ -42,6 +46,7 @@ namespace TbmToSun
     }
     public class InstructionSong
     {
+        public required string Path;
         public required TbmModule Module;
         public bool IsSfx;
         public string? Title;

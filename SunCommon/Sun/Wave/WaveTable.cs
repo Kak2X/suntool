@@ -7,6 +7,7 @@ public class WaveTable : IRomData
     public string? GetLabel() => null;
     public void WriteToDisasm(IMultiWriter sw)
     {
+        sw.ChangeFile("driver/data/waves.asm");
         sw.WriteLine(Consts.WaveTblBegin);
         foreach (var x in Waves)
             sw.WriteIndent($"dw {x.GetLabel()}");
@@ -28,5 +29,13 @@ public class WaveTable : IRomData
         Waves.Add(toAdd);
 
         return toAdd.Id;
+    }
+
+    public int FullSizeInRom()
+    {
+        var res = SizeInRom();
+        foreach (var x in Waves)
+            res += x.SizeInRom();
+        return res;
     }
 }

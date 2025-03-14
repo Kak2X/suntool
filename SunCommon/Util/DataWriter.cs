@@ -14,18 +14,6 @@ public class DataWriter
         public required List<SongDef> Groups;
         public required int Size;
     }
-    // Object list containing unique object instances
-    private class ObjectSet
-    {
-        private List<object> _list = new();
-        public bool Add(object obj)
-        {
-            if (_list.Contains(obj))
-                return false;
-            _list.Add(obj);
-            return true;
-        }
-    }
 
     public DataWriter(IMultiWriter w, PointerTable ptrTbl, int splitOn)
     {
@@ -123,9 +111,7 @@ public class DataWriter
             {
                 Reset(chan.Data.Main);
                 foreach (var sub in chan.Data.Subs)
-                {
                     Reset(sub);
-                }
             }
 
         void Reset(SndFunc func)
