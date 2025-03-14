@@ -46,20 +46,19 @@ public class VibratoTable : IRomData
                 if (haystack.Offsets.EndsWith(needle.Offsets))
                 {
                     // Needle can be deleted
-                    toCheck.RemoveAt(i);
-
-                    i--; // Balance
-                    j--; // j always > i
+                    //i--; // Balance
+                    //j--; // j always > i
 
                     // Repoint all uses (needle will become unreferenced)
                     var posDiff = haystack.Offsets.Length - needle.Offsets.Length;
                     for (var k = 0; k < _vibratos.Count; k++)
                     {
-                        if (_vibratos[k].Data == needle)
+                        var def = _vibratos[k];
+                        if (def.Data == needle)
                         {
-                            _vibratos[k].Data = haystack;
-                            _vibratos[k].StartPoint += posDiff;
-                            _vibratos[k].LoopPoint += posDiff;
+                            def.Data = haystack;
+                            def.StartPoint += posDiff;
+                            def.Data.Parents.Add(def);
                         }
                     }
                 }

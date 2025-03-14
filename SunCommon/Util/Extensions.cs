@@ -22,9 +22,9 @@ public static class NumExtensions
 
     public static bool EndsWith([NotNull] this IList<byte> haystack, [NotNull] IList<byte> needle)
     {
-        if (needle.Count >= haystack.Count) return false;
+        if (needle.Count > haystack.Count) return false;
         for (var i = 0; i < needle.Count; i++)
-            if (needle[i] != haystack[haystack.Count - i - 1])
+            if (needle[i] != haystack[haystack.Count - needle.Count + i])
                 return false;
         return true;
     }

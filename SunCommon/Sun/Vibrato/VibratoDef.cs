@@ -11,6 +11,6 @@ public class VibratoDef : IRomData
     public string? GetLabel() => null;
     public void WriteToDisasm(IMultiWriter sw)
     {
-        sw.WriteIndent($"mVbDef {Data.GetLabel()}, {LoopPoint.AsHexByte()} ; {Id.AsHexByte()}");
+        sw.WriteIndent($"mVbDef {Data.GetLabel()}{(StartPoint != 0 ? $".sp{StartPoint:X}" : "")}, {LoopPoint.AsHexByte()} ; {Id.AsHexByte()}");
     }
 }
