@@ -15,6 +15,7 @@ namespace TbmToSun
                 var cmd = cmds[i].Trim();
                 if (!cmd.StartsWith(';'))
                 {
+                    cmd = cmd.Split(';')[0];
                     if (cmd.StartsWith("OutputPath="))
                         OutputPath = cmd.Split('=')[1];
                     else if (cmd.StartsWith("SplitOn="))
