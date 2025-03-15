@@ -194,7 +194,16 @@ public class GbReader
         chHeader.FineTune = S.ReadByte();
         chHeader.Unused = (byte)S.ReadByte();
         if (isFirstChannel)
-            songHdr.IsSfx = chHeader.InitialStatus.HasFlag(SndInfoStatus.SIS_SFX);
+        {
+            if (songHdr.Id == 0x0C)
+                songHdr.Kind = SongKind.Pause;
+            else if (songHdr.Id == 0x0D)
+                songHdr.Kind = SongKind.Unpause;
+            else if (chHeader.InitialStatus.HasFlag(SndInfoStatus.SIS_SFX))
+                songHdr.Kind = SongKind.SFX;
+            else
+                songHdr.Kind = SongKind.BGM;
+        }
 
         // Parse out the sound data
         Seek(mainPtr, () =>

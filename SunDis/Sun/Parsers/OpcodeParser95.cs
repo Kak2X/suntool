@@ -36,7 +36,7 @@ public class OpcodeParser95(Stream s) : OpcodeParser(s)
             };
         }
         // The preset allows standalone lengths
-        if (song.SoundChannelPtr == SndChPtrNum.SND_CH4_PTR && song.Parent!.IsSfx)
+        if (song.SoundChannelPtr == SndChPtrNum.SND_CH4_PTR && song.Parent!.Kind == SongKind.SFX)
             return CmdNoisePoly(cmd);
         else if (cmd < (int)SndCmdType.SNDNOTE_BASE)
             return CmdWait(cmd);

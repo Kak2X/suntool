@@ -42,7 +42,7 @@ public class DataWriter
         foreach (var song in PtrTbl.Songs)
         {
             // Put it in a separate file
-            var songPath = $"driver/{(song.IsSfx ? "sfx/" : "bgm/")}{song.Name}.asm".ToLowerInvariant();
+            var songPath = $"driver/{(song.Kind == SongKind.SFX ? "sfx/" : "bgm/")}{song.Name}.asm".ToLowerInvariant();
             W.ChangeFile(songPath);
             files.Add(song.Id, new SongDef(songPath, song));
 

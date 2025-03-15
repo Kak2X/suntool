@@ -20,7 +20,7 @@ public class TbmConversion
     public WaveTable Waves = new();
     public TbmConversion(InstructionSheet sheet)
     {
-        PtrTbl.Mode = sheet.OutputFormat;
+        PtrTbl.Mode = DataMode.OPEx;
         foreach (var song in sheet.Rows)
         {
             Console.WriteLine($"-> {song.Path}");
@@ -66,7 +66,7 @@ public class TbmConversion
                 Name = sheetSong.Title != null
                      ? (sheetSong.Module.Songs.Length != 1 ? $"{id:X2}_" : string.Empty) + LabelNormalizer.Apply(sheetSong.Title)
                      : $"{id:X2}",
-                IsSfx = sheetSong.IsSfx,
+                Kind = sheetSong.Kind,
                 ChannelCount = 0
             };
 
@@ -85,7 +85,7 @@ public class TbmConversion
                 var resCh = new SndChHeader
                 {
                     Parent = res,
-                    InitialStatus = SndInfoStatus.SIS_ENABLED | (res.IsSfx ? SndInfoStatus.SIS_SFX : 0),
+                    InitialStatus = SndInfoStatus.SIS_ENABLED | (res.Kind == SongKind.SFX ? SndInfoStatus.SIS_SFX : 0),
                     Unused = 0x56, // :^)
                 };
                 var initialWave = (CmdWave?)null;

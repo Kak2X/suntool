@@ -8,7 +8,7 @@ public class SndHeader : IRomData
     private string _name = null!;
     public string Name
     {
-        get => (IsSfx ? "SFX_" : "BGM_") + _name;
+        get => (Kind == SongKind.SFX ? "SFX_" : "BGM_") + _name;
         set
         {
             if (value.StartsWith("SFX_", StringComparison.OrdinalIgnoreCase) || value.StartsWith("BGM_", StringComparison.OrdinalIgnoreCase))
@@ -17,7 +17,7 @@ public class SndHeader : IRomData
         }
     }
     public int Id { get; set; }
-    public bool IsSfx { get; set; }
+    public SongKind Kind { get; set; }
     public int? ChannelCount { get; set; }
 
     public string? GetLabel() => $"SndHeader_{Name}";

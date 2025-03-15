@@ -22,19 +22,18 @@ public class PointerTable : IRomData
             sw.Write(Consts.SndListBegin);
             foreach (var song in Songs)
             {
-                string initCode;
-                if (song.Id == 0x0C)
-                    initCode = Consts.SndInitPause;
-                else if (song.Id == 0x0D)
-                    initCode = Consts.SndInitUnpause;
-                else if (!song.IsSfx)
-                    initCode = Consts.SndInitNewBgm;
-                else initCode = song.Channels.Min(x => x.SoundChannelPtr) switch
+                var initCode = song.Kind switch
                 {
-                    SndChPtrNum.SND_CH1_PTR => Consts.SndInitNewSfx1234,
-                    SndChPtrNum.SND_CH2_PTR or SndChPtrNum.SND_CH3_PTR => Consts.SndInitNewSfx234,
-                    SndChPtrNum.SND_CH4_PTR => Consts.SndInitNewSfx4,
-                    _ => Consts.SndInitDummy,
+                    SongKind.Pause => Consts.SndInitPause,
+                    SongKind.Unpause => Consts.SndInitUnpause,
+                    SongKind.BGM => Consts.SndInitNewBgm,
+                    _ => song.Channels.Min(x => x.SoundChannelPtr) switch
+                    {
+                        SndChPtrNum.SND_CH1_PTR => Consts.SndInitNewSfx1234,
+                        SndChPtrNum.SND_CH2_PTR or SndChPtrNum.SND_CH3_PTR => Consts.SndInitNewSfx234,
+                        SndChPtrNum.SND_CH4_PTR => Consts.SndInitNewSfx4,
+                        _ => Consts.SndInitDummy,
+                    },
                 };
                 sw.WriteLine($"\tdsong {song.GetLabel()}, {initCode}_\\1 ; {(song.Id + 0x80).AsHexByte()}");
             }

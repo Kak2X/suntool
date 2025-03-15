@@ -4,7 +4,6 @@ namespace TbmToSun
 {
     public class InstructionSheet
     {
-        public readonly DataMode OutputFormat;
         public readonly string OutputPath;
         public readonly int? SplitOn;
         public readonly List<InstructionSong> Rows = [];
@@ -16,9 +15,7 @@ namespace TbmToSun
                 var cmd = cmds[i].Trim();
                 if (!cmd.StartsWith(';'))
                 {
-                    if (cmd.StartsWith("Format="))
-                        OutputFormat = Enum.Parse<DataMode>(cmd.Split('=')[1]);
-                    else if (cmd.StartsWith("OutputPath="))
+                    if (cmd.StartsWith("OutputPath="))
                         OutputPath = cmd.Split('=')[1];
                     else if (cmd.StartsWith("SplitOn="))
                         SplitOn = int.Parse(cmd.Split('=')[1]);
@@ -33,7 +30,14 @@ namespace TbmToSun
                             {
                                 Path = row[0],
                                 Module = new TbmModule(input),
-                                IsSfx = int.Parse(row[1]) != 0,
+                                Kind = row[1].ToUpperInvariant() switch
+                                {
+                                    "B" => SongKind.BGM,
+                                    "S" => SongKind.SFX,
+                                    "P" => SongKind.Pause,
+                                    "U" => SongKind.Unpause,
+                                    _ => 0,
+                                },
                                 Title = row.Length > 2 ? row[2] : Path.GetFileNameWithoutExtension(row[0]),
                             });
                         }
@@ -48,7 +52,7 @@ namespace TbmToSun
     {
         public required string Path;
         public required TbmModule Module;
-        public bool IsSfx;
+        public SongKind Kind;
         public string? Title;
     }
 }
