@@ -7,15 +7,11 @@ if (args.Length == 0)
 @"TbmToSun:
   Converts TrackerBoy TBM modules to the ""Sun L"" sound driver format.
 Usage:
-  TbmToSun [options]
-Options:
-  --i      The path to the sheet file.");
+  TbmToSun <path to sheet file>");
 }
 else
 {
-    var xargs = new KArgs(args);
-
-    var sheetPath = xargs.Get("i", true)!;
+    var sheetPath = args[0];
     if (!Path.Exists(sheetPath))
         Console.WriteLine($"\"{sheetPath}\" does not exist.");
     else

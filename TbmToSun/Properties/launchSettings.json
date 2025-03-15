@@ -2,7 +2,7 @@
   "profiles": {
     "TbmToSun": {
       "commandName": "Project",
-      "commandLineArgs": "--i \"C:\\soundtemp\\convert_src_mini.csv\""
+      "commandLineArgs": "\"C:\\soundtemp\\convert_src_mini.csv\""
     }
   }
 }
