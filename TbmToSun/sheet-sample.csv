@@ -1,0 +1,23 @@
+﻿; Output folder the disassembly output is written to.
+; This can be copied as-is to the OP sound driver disassembly.
+OutputPath=out\some_folder
+
+; Include individual files
+; Files start <path>,<[B]gm/[S]fx/[P]ause/[U]npause>,<title override>
+src\bgm_test_a.tbm,B ; Inline comment
+src\bgm_test_b.tbm,B,01_NameOverride
+src\sfx_test_c.tbm,S
+C:\somewhere\src\bgm_pause.tbm,P
+src\bgm_unpause.tbm,U
+
+; Include individual files, with a parent directory
+InputPath=C:\somewhere\src_two
+bgm_new_a.tbm,B
+bgm_new_b.tbm,B
+
+; Clear input path
+InputPath=
+
+; Include whole folders, recursively scanned for *.tbm files
+; You cannot specify a title override this way, and all found modules will be of the specified type
+C:\somewhere\src_three,B
