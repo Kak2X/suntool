@@ -4,6 +4,23 @@ using System.Text;
 
 namespace SunCommon;
 
+public static class MiscExtensions
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryGetValue<T>(this T[] array, int key, out T result)
+    {
+        if (key < 0 || key >= array.Length)
+        {
+            result = default!;
+            return false;
+        } 
+        else
+        {
+            result = array[key];
+            return true;
+        }
+    }
+}
 public static class NumExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

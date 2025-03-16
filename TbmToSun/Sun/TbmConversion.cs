@@ -107,8 +107,7 @@ public class TbmConversion
                         resCh.Data.Main.AddOpcode(new CmdWaveVol { Vol = 0xC0 });
                         if (waveMap.Count > 0)
                         {
-                            var initWaveId = sheetSong.Module.Instruments.FirstOrDefault(x => x.Channel == ChannelType.Ch3)?.Envelope;
-                            initialWave = new CmdWave { WaveId = (initWaveId.HasValue ? waveMap[initWaveId.Value] : waveMap.First().Value) + 1 };
+                            initialWave = new CmdWave { WaveId = waveMap.First().Value + 1 };
                             resCh.Data.Main.AddOpcode(initialWave);
                         }
                         break;
@@ -162,18 +161,19 @@ public class TbmConversion
                             if (row.Instrument.HasValue)
                             {
                                 macroLength = macroLenMap.GetValueOrDefault(row.Instrument.Value, null);
-
+                                
                                 // Instrument ID also determines wave ID
-                                if (chData.Channel == ChannelType.Ch3 
-                                    && row.Instrument.HasValue 
-                                    && row.Instrument <= sheetSong.Module.Instruments.Length 
-                                    && sheetSong.Module.Instruments[row.Instrument.Value].Channel == ChannelType.Ch3)
+                                if (chData.Channel == ChannelType.Ch3)
+                                if (row.Instrument.HasValue)
+                                if (sheetSong.Module.Instruments.TryGetValue(row.Instrument.Value, out var instr))
+                                if (instr.Channel == ChannelType.Ch3)
+                                if (instr.EnvelopeEnabled == true)
+                                if (instr.Envelope.HasValue)
+                                if (waveMap.TryGetValue(instr.Envelope.Value, out var waveId))
+                                if (waveId != lastWaveId)
                                 {
-                                    if (waveMap.TryGetValue(sheetSong.Module.Instruments[row.Instrument.Value].Envelope ?? -1, out var waveId) && waveId != lastWaveId)
-                                    {
-                                        AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
-                                        lastWaveId = waveId;
-                                    }
+                                    AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
+                                    lastWaveId = waveId;
                                 }
                             }
 
@@ -204,7 +204,11 @@ public class TbmConversion
                                         break;
                                     case EffectType.SetEnvelope when chData.Channel == ChannelType.Ch3:
                                         if (waveMap.TryGetValue(x.EffectParam, out var waveId))
+                                        if (waveId != lastWaveId)
+                                        {
+                                            lastWaveId = waveId;
                                             AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
+                                        }
                                         break;
                                     case EffectType.SetEnvelope:
                                         AddSpecOpcode(new CmdEnvelope { Arg = x.EffectParam });
@@ -406,7 +410,8 @@ public class TbmConversion
                 if (chData.Channel == ChannelType.Ch3 && initialWave != null)
                 {
                     var allWaveChg = funcs.SelectMany(x => x.Value.Func.Opcodes.OfType<CmdWave>()).ToArray();
-                    if (allWaveChg.GroupBy(x => x.WaveId).Count() == 1)
+                    var grp = allWaveChg.GroupBy(x => x.WaveId).ToArray();
+                    if (grp.Length == 1 && grp[0].Key == initialWave.WaveId)
                     {
                         foreach (var x in allWaveChg)
                             x.Parent.Opcodes.Remove(x);
