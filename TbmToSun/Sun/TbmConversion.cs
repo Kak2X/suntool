@@ -105,6 +105,7 @@ public class TbmConversion
                         resCh.SoundChannelPtr = SndChPtrNum.SND_CH3_PTR;
                         resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x44 });
                         resCh.Data.Main.AddOpcode(new CmdWaveVol { Vol = 0xC0 });
+                        resCh.Data.Main.AddOpcode(new CmdWaveCutoff { Length = 0 });
                         if (waveMap.Count > 0)
                         {
                             initialWave = new CmdWave { WaveId = waveMap.First().Value + 1 };
