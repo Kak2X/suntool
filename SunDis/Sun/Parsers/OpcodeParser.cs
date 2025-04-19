@@ -71,6 +71,11 @@ public abstract class OpcodeParser(Stream s)
         Offset = s.ReadByte()
     };
 
+    public SndOpcode CmdFineTuneValue() => new CmdFineTuneValue
+    {
+        Offset = s.ReadByte()
+    };
+
     public SndOpcode CmdLockEnv() => new CmdLockEnv
     {
     };

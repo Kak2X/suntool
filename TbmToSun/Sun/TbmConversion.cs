@@ -257,8 +257,7 @@ public class TbmConversion
                                     case EffectType.VibratoDelay:
                                         break;
                                     case EffectType.Tuning:
-                                        // Can't be used here, in TB it alters the frequency offset, in OP the note index
-                                        //AddSpecOpcode(new CmdFineTune { Offset = x.EffectParam - 0x80 });
+                                        AddSpecOpcode(new CmdFineTuneValue { Offset = x.EffectParam - 0x80 });
                                         break;
                                     case EffectType.NoteSlideUp:
                                         break;
