@@ -32,7 +32,7 @@ namespace TbmToSun
                             Console.WriteLine($"-> {fullPath}");
                             if (Directory.Exists(fullPath))
                             {
-                                var found = Directory.GetFiles("C:\\soundtemp", "*.tbm", SearchOption.AllDirectories);
+                                var found = Directory.GetFiles(fullPath, "*.tbm", SearchOption.AllDirectories);
                                 foreach (var x in found)
                                     AddFile(x, row);
                             }
