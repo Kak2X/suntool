@@ -8,6 +8,7 @@ public class DataWriter
     protected readonly IMultiWriter W;
     protected readonly PointerTable PtrTbl;
     protected readonly int SplitOn;
+    protected readonly int StartingBank;
     protected record SongDef(string FilePath, SndHeader Song);
     private class SongGroupDef
     {
@@ -15,11 +16,12 @@ public class DataWriter
         public required int Size;
     }
 
-    public DataWriter(IMultiWriter w, PointerTable ptrTbl, int splitOn)
+    public DataWriter(IMultiWriter w, PointerTable ptrTbl, int splitOn, int startingBank)
     {
         W = w;
         PtrTbl = ptrTbl;
         SplitOn = splitOn;
+        StartingBank = startingBank;
     }
 
     public void WriteDisassembly()
@@ -256,7 +258,7 @@ public class DataWriter
             // Finally, print them out
             for (var i = 0; i < banks.Count; i++)
             {
-                W.WriteIndent($"mSOUNDBANK {(banks.Count - i):00}{(i == 0 ? ", 1 ; First bank" : "")} ; Size: {banks[i].Size.AsHexWord()}");
+                W.WriteIndent($"mSOUNDBANK {(StartingBank - 1 + banks.Count - i):00}{(i == 0 ? ", 1 ; First bank" : "")} ; Size: {banks[i].Size.AsHexWord()}/{realSplitOn.AsHexWord()}");
                 foreach (var x in banks[i].Groups)
                     W.WriteLine($"INCLUDE \"{x.FilePath.Replace('\\', '/')}\"");
             }

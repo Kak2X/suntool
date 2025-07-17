@@ -25,7 +25,7 @@ else
 
         Console.WriteLine($"Writing the disassembly files to \"{sheet.OutputPath}\"...");
         using var sw = new MultiWriter(sheet.OutputPath);
-        var writer = new DataWriter(sw, res.PtrTbl, (sheet.SplitOn ?? Consts.FreeSpaceBase) - extraSize);
+        var writer = new DataWriter(sw, res.PtrTbl, (sheet.SplitOn ?? Consts.FreeSpaceBase) - extraSize, sheet.StartingBank);
         writer.WriteDisassembly();
 
         Console.WriteLine($"Writing vibratos...");

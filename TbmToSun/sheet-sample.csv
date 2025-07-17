@@ -2,6 +2,11 @@
 ; This can be copied as-is to the OP sound driver disassembly.
 OutputPath=out\some_folder
 
+; Specify the first bank songs can be written to. 
+; This is purely for convenience to avoid having to manually edit song_includes.asm on each re-conversion.
+; If not specified, it defaults to BANK 0x01.
+StartingBank=0x01
+
 ; Include individual files
 ; Files start <path>,<[B]gm/[S]fx/[P]ause/[U]npause>,<title override>
 src\bgm_test_a.tbm,B ; Inline comment

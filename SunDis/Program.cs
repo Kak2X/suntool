@@ -62,7 +62,7 @@ else
     using var sw = new MultiWriter(outputPath);
     res.Playlist.Mode = DataMode.OPEx; // Force disassembly-friendly main.asm
     Console.WriteLine($"Writing the disassembly files to \"{outputPath}\"...");
-    var writer = useSorted ? new SortedDataWriter(sw, res) : new DataWriter(sw, res.Playlist, splitOn);
+    var writer = useSorted ? new SortedDataWriter(sw, res) : new DataWriter(sw, res.Playlist, splitOn, Consts.DefaultStartingBank);
     writer.WriteDisassembly();
     Console.WriteLine("Done.");
 }

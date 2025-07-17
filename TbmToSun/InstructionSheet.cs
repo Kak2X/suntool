@@ -1,4 +1,5 @@
 ﻿using SunCommon;
+using System.Globalization;
 
 namespace TbmToSun
 {
@@ -6,6 +7,7 @@ namespace TbmToSun
     {
         public readonly string OutputPath;
         public readonly int? SplitOn;
+        public readonly int StartingBank = Consts.DefaultStartingBank;
         public readonly List<InstructionSong> Rows = [];
         public InstructionSheet(string file)
         {
@@ -23,6 +25,8 @@ namespace TbmToSun
                         inputPath = cmd.Split('=')[1];
                     else if (cmd.StartsWith("SplitOn="))
                         SplitOn = int.Parse(cmd.Split('=')[1]);
+                    else if (cmd.StartsWith("StartingBank="))
+                        StartingBank = Convert.ToInt32(cmd.Split('=')[1], 16);
                     else
                     {
                         var row = cmds[i].Split(",").Select(x => x.Trim()).ToArray();

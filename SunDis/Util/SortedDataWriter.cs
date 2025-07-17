@@ -8,7 +8,7 @@ public class SortedDataWriter : DataWriter
     private readonly GbReaderResult Read;
     private readonly bool DbgAddr;
 
-    public SortedDataWriter(IMultiWriter w, GbReaderResult read, bool dbgAddr = false) : base(w, read.Playlist, 0)
+    public SortedDataWriter(IMultiWriter w, GbReaderResult read, bool dbgAddr = false) : base(w, read.Playlist, 0, Consts.DefaultStartingBank)
     {
         Read = read;
         DbgAddr = dbgAddr;
