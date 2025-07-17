@@ -70,434 +70,434 @@ public class TbmConversion
                 ChannelCount = 0
             };
 
-            DoChannel(song.Ch1);
-            DoChannel(song.Ch2);
-            DoChannel(song.Ch3);
-            DoChannel(song.Ch4);
+            DoChannel(song.Ch1, sheetSong, waveMap, vibratoMap, macroLenMap, song, res);
+            DoChannel(song.Ch2, sheetSong, waveMap, vibratoMap, macroLenMap, song, res);
+            DoChannel(song.Ch3, sheetSong, waveMap, vibratoMap, macroLenMap, song, res);
+            DoChannel(song.Ch4, sheetSong, waveMap, vibratoMap, macroLenMap, song, res);
 
             PtrTbl.Songs.Add(res);
+        }
+    }
 
-            void DoChannel(PrettySong.PrettyChannel? chData)
-            {
-                if (chData == null) return;
-                res.ChannelCount++;
+    private static void DoChannel(PrettySong.PrettyChannel? chData, InstructionSong sheetSong, Dictionary<int, int> waveMap, Dictionary<int, int> vibratoMap, Dictionary<int, int?> macroLenMap, PrettySong song, SndHeader res)
+    {
+        if (chData == null) return;
+        res.ChannelCount++;
 
-                var resCh = new SndChHeader
+        var resCh = new SndChHeader
+        {
+            Parent = res,
+            InitialStatus = SndInfoStatus.SIS_ENABLED | (res.Kind == SongKind.SFX ? SndInfoStatus.SIS_SFX : 0),
+            Unused = 0x56, // :^)
+        };
+        var initialWave = (CmdWave?)null;
+
+        // Define initial commands at the start of a song
+        switch (chData.Channel)
+        {
+            case ChannelType.Ch1:
+                resCh.SoundChannelPtr = SndChPtrNum.SND_CH1_PTR;
+                resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x11 });
+                break;
+            case ChannelType.Ch2:
+                resCh.SoundChannelPtr = SndChPtrNum.SND_CH2_PTR;
+                resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x22 });
+                break;
+            case ChannelType.Ch3:
+                resCh.SoundChannelPtr = SndChPtrNum.SND_CH3_PTR;
+                resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x44 });
+                resCh.Data.Main.AddOpcode(new CmdWaveVol { Vol = 0xC0 });
+                resCh.Data.Main.AddOpcode(new CmdWaveCutoff { Length = 0 });
+                if (waveMap.Count > 0)
                 {
-                    Parent = res,
-                    InitialStatus = SndInfoStatus.SIS_ENABLED | (res.Kind == SongKind.SFX ? SndInfoStatus.SIS_SFX : 0),
-                    Unused = 0x56, // :^)
-                };
-                var initialWave = (CmdWave?)null;
-
-                // Define initial commands at the start of a song
-                switch (chData.Channel)
-                {
-                    case ChannelType.Ch1:
-                        resCh.SoundChannelPtr = SndChPtrNum.SND_CH1_PTR;
-                        resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x11 });
-                        break;
-                    case ChannelType.Ch2:
-                        resCh.SoundChannelPtr = SndChPtrNum.SND_CH2_PTR;
-                        resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x22 });
-                        break;
-                    case ChannelType.Ch3:
-                        resCh.SoundChannelPtr = SndChPtrNum.SND_CH3_PTR;
-                        resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x44 });
-                        resCh.Data.Main.AddOpcode(new CmdWaveVol { Vol = 0xC0 });
-                        resCh.Data.Main.AddOpcode(new CmdWaveCutoff { Length = 0 });
-                        if (waveMap.Count > 0)
-                        {
-                            initialWave = new CmdWave { WaveId = waveMap.First().Value + 1 };
-                            resCh.Data.Main.AddOpcode(initialWave);
-                        }
-                        break;
-                    case ChannelType.Ch4:
-                        resCh.SoundChannelPtr = SndChPtrNum.SND_CH4_PTR;
-                        resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x88 });
-                        break;
+                    initialWave = new CmdWave { WaveId = waveMap.First().Value + 1 };
+                    resCh.Data.Main.AddOpcode(initialWave);
                 }
+                break;
+            case ChannelType.Ch4:
+                resCh.SoundChannelPtr = SndChPtrNum.SND_CH4_PTR;
+                resCh.Data.Main.AddOpcode(new CmdPanning { Pan = 0x88 });
+                break;
+        }
 
-                // Determines which patterns are used only once (read: should be inlined)
-                var canInline = chData.TrackOrder.GroupBy(x => x).ToDictionary(x => x.Key, x => x.Count() == 1);
-                var songSpeed = song.Speed.Rounded;
-                var noiseLsfr = 0; // For SetTimbre on Ch4, but this is not a safe command to use
+        // Determines which patterns are used only once (read: should be inlined)
+        var canInline = chData.TrackOrder.GroupBy(x => x).ToDictionary(x => x.Key, x => x.Count() == 1);
+        var songSpeed = song.Speed.Rounded;
+        var noiseLsfr = 0; // For SetTimbre on Ch4, but this is not a safe command to use
 
-                // Detect if the song uses vibratos or not.
-                // If it doesn't, we can save CPU time by skipping vibrato commands.
-                var usesVibratos = false;
-                foreach (var track in chData.Tracks)
-                    foreach (var row in track.Value.Rows)
-                        if (row.Instrument.HasValue && vibratoMap.ContainsKey(row.Instrument.Value))
-                        {
-                            usesVibratos = true;
-                            goto vibratoCheckDone;
-                        }
-                vibratoCheckDone:
-
-                var funcs = new Dictionary<int, SndFuncWrap>();
-                foreach (var i in chData.TrackOrder.Distinct())
+        // Detect if the song uses vibratos or not.
+        // If it doesn't, we can save CPU time by skipping vibrato commands.
+        var usesVibratos = false;
+        foreach (var track in chData.Tracks)
+            foreach (var row in track.Value.Rows)
+                if (row.Instrument.HasValue && vibratoMap.ContainsKey(row.Instrument.Value))
                 {
-                    if (!chData.Tracks.TryGetValue(i, out var pattern))
-                        Console.WriteLine($"WARNING: Pattern Ch{((int)chData.Channel + 1)}.{i} is missing, skipping.");
-                    else
+                    usesVibratos = true;
+                    goto vibratoCheckDone;
+                }
+            vibratoCheckDone:
+
+        var funcs = new Dictionary<int, SndFuncWrap>();
+        foreach (var i in chData.TrackOrder.Distinct())
+        {
+            if (!chData.Tracks.TryGetValue(i, out var pattern))
+                Console.WriteLine($"WARNING: Pattern Ch{((int)chData.Channel + 1)}.{i} is missing, skipping.");
+            else
+            {
+                var func = new SndFunc { Parent = resCh.Data };
+                var funcWrap = new SndFuncWrap
+                {
+                    Func = func,
+                };
+
+                // Process rows
+                var lastNote = (ICmdNote?)null;
+                var lastNoteBak = (ICmdNote?)null; // Backup for inspection
+                var macroLength = (int?)null;
+                var queueSilence = false;
+                int? lastVibrato = -1;
+                int? lastWaveId = null;
+
+                foreach (var row in pattern.Rows)
+                {
+                    // If a (wave) row specifies an instrument, immediately get the new cutoff length value
+                    if (row.Instrument.HasValue)
                     {
-                        var func = new SndFunc { Parent = resCh.Data };
-                        var funcWrap = new SndFuncWrap
-                        {
-                            Func = func,
-                        };
-                        
-                        // Process rows
-                        var lastNote = (ICmdNote?)null;
-                        var lastNoteBak = (ICmdNote?)null; // Backup for inspection
-                        var macroLength = (int?)null;
-                        var queueSilence = false;
-                        int? lastVibrato = -1;
-                        int? lastWaveId = null;
+                        macroLength = macroLenMap.GetValueOrDefault(row.Instrument.Value, null);
 
-                        foreach (var row in pattern.Rows)
-                        {
-                            // If a (wave) row specifies an instrument, immediately get the new cutoff length value
+                        // Instrument ID also determines wave ID
+                        if (chData.Channel == ChannelType.Ch3)
                             if (row.Instrument.HasValue)
-                            {
-                                macroLength = macroLenMap.GetValueOrDefault(row.Instrument.Value, null);
-                                
-                                // Instrument ID also determines wave ID
-                                if (chData.Channel == ChannelType.Ch3)
-                                if (row.Instrument.HasValue)
                                 if (sheetSong.Module.Instruments.TryGetValue(row.Instrument.Value, out var instr))
-                                if (instr.Channel == ChannelType.Ch3)
-                                if (instr.EnvelopeEnabled == true)
-                                if (instr.Envelope.HasValue)
-                                if (waveMap.TryGetValue(instr.Envelope.Value, out var waveId))
-                                if (waveId != lastWaveId)
-                                {
-                                    AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
-                                    lastWaveId = waveId;
-                                }
-                            }
+                                    if (instr.Channel == ChannelType.Ch3)
+                                        if (instr.EnvelopeEnabled == true)
+                                            if (instr.Envelope.HasValue)
+                                                if (waveMap.TryGetValue(instr.Envelope.Value, out var waveId))
+                                                    if (waveId != lastWaveId)
+                                                    {
+                                                        AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
+                                                        lastWaveId = waveId;
+                                                    }
+                    }
 
-                            // Base length for this row.
-                            // Most of the time, this will be added as-is to the previous wait.
-                            var noteLength = songSpeed;
-                            var silenceLength = 0;
+                    // Base length for this row.
+                    // Most of the time, this will be added as-is to the previous wait.
+                    var noteLength = songSpeed;
+                    var silenceLength = 0;
 
-                            foreach (var x in row.Effects)
-                            {
-                                switch (x.EffectType)
-                                {
-                                    case EffectType.PatternHalt:
-                                        // Halt immediately on the spot
-                                        funcWrap.StopCh = true;
-                                        goto exitPatternLoop;
-                                    case EffectType.SetTempo:
-                                        // Usually: noteLength = songSpeed, silenceDone = 0, silenceLength = 0
-                                        var silenceDone = songSpeed - noteLength;
-                                        songSpeed = new PrettySongSpeed(x.EffectParam).Rounded;
-                                        noteLength = songSpeed - silenceDone - silenceLength;
-                                        break;
-                                    case EffectType.Sfx when chData.Channel == ChannelType.Ch3: // wave
-                                        AddSpecOpcode(new CmdWaveCutoff { Length = x.EffectParam });
-                                        break;
-                                    case EffectType.Sfx when chData.Channel == ChannelType.Ch4: // noise
-                                        Console.WriteLine("noise_cutoff not implemented.");
-                                        break;
-                                    case EffectType.SetEnvelope when chData.Channel == ChannelType.Ch3:
-                                        if (waveMap.TryGetValue(x.EffectParam, out var waveId))
-                                        if (waveId != lastWaveId)
-                                        {
-                                            lastWaveId = waveId;
-                                            AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
-                                        }
-                                        break;
-                                    case EffectType.SetEnvelope:
-                                        AddSpecOpcode(new CmdEnvelope { Arg = x.EffectParam });
-                                        break;
-                                    case EffectType.SetTimbre when chData.Channel == ChannelType.Ch3:
-                                        AddSpecOpcode(new CmdWaveVol { Vol = x.EffectParam << 6 });
-                                        break;
-                                    case EffectType.SetTimbre when chData.Channel == ChannelType.Ch4:
-                                        noiseLsfr = x.EffectParam << 3;
-                                        break;
-                                    case EffectType.SetTimbre:
-                                        AddSpecOpcode(new CmdDutyCycle { Duty = x.EffectParam });
-                                        break;
-                                    case EffectType.SetPanning:
-                                        // 00 (mute), 01 (left), 10 (right), 11 (both)
-                                        var l = x.EffectParam & 0b1;
-                                        var r = x.EffectParam >> 1;
-                                        AddSpecOpcode(new CmdPanning { Pan = (l << ((int)chData.Channel + 4)) + (r << (int)chData.Channel) });
-                                        break;
-                                    case EffectType.SetSweep:
-                                        AddSpecOpcode(new CmdSweep { Arg = x.EffectParam });
-                                        break;
-                                    case EffectType.DelayedCut:
-                                        // Row has note + silence
-                                        noteLength = x.EffectParam;
-                                        silenceLength = songSpeed - x.EffectParam;
-                                        break;
-                                    case EffectType.DelayedNote:
-                                        // Row has silence + note
-                                        IncWaited(x.EffectParam);
-                                        noteLength -= x.EffectParam;
-                                        break;
-                                    case EffectType.Lock:
-                                        break;
-                                    case EffectType.Arpeggio:
-                                        break;
-                                    case EffectType.PitchUp:
-                                        break;
-                                    case EffectType.PitchDown:
-                                        break;
-                                    case EffectType.AutoPortamento:
-                                        break;
-                                    case EffectType.Vibrato: // This kind of Vibrato isn't supported, use instruments instead
-                                        break;
-                                    case EffectType.VibratoDelay:
-                                        break;
-                                    case EffectType.Tuning:
-                                        AddSpecOpcode(new CmdFineTuneValue { Offset = x.EffectParam - 0x80 });
-                                        break;
-                                    case EffectType.NoteSlideUp:
-                                        break;
-                                    case EffectType.NoteSlideDown:
-                                        break;
-                                    case EffectType.SetGlobalVolume:
-                                        break;
-                                }
-                            }
-
-                            switch (row.Note)
-                            {
-                                case 85:
-                                    AddSilence(noteLength);
-                                    break;
-                                case 0:
-                                    if (noteLength > 0)
-                                        IncWaited(noteLength);
-                                    break;
-                                default:
-                                    if (usesVibratos)
+                    foreach (var x in row.Effects)
+                    {
+                        switch (x.EffectType)
+                        {
+                            case EffectType.PatternHalt:
+                                // Halt immediately on the spot
+                                funcWrap.StopCh = true;
+                                goto exitPatternLoop;
+                            case EffectType.SetTempo:
+                                // Usually: noteLength = songSpeed, silenceDone = 0, silenceLength = 0
+                                var silenceDone = songSpeed - noteLength;
+                                songSpeed = new PrettySongSpeed(x.EffectParam).Rounded;
+                                noteLength = songSpeed - silenceDone - silenceLength;
+                                break;
+                            case EffectType.Sfx when chData.Channel == ChannelType.Ch3: // wave
+                                AddSpecOpcode(new CmdWaveCutoff { Length = x.EffectParam });
+                                break;
+                            case EffectType.Sfx when chData.Channel == ChannelType.Ch4: // noise
+                                Console.WriteLine("noise_cutoff not implemented.");
+                                break;
+                            case EffectType.SetEnvelope when chData.Channel == ChannelType.Ch3:
+                                if (waveMap.TryGetValue(x.EffectParam, out var waveId))
+                                    if (waveId != lastWaveId)
                                     {
-                                        var curVib = vibratoMap.ContainsKey(row.Instrument.GetValueOrDefault()) ? vibratoMap[row.Instrument.GetValueOrDefault()] : (int?)null;
-                                        if (curVib != lastVibrato)
-                                        {
-                                            func.AddOpcode(curVib.HasValue ? new CmdVibratoOp { VibratoId = curVib.Value } : new CmdClrVibrato());
-                                            lastVibrato = curVib;
-                                        }
+                                        lastWaveId = waveId;
+                                        AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
                                     }
-
-                                    if (chData.Channel == ChannelType.Ch4)
-                                    {
-                                        var noteId = SciNote.NoiseNoteTable[row.Note - 1] + noiseLsfr;
-                                        lastNote = new CmdNoisePoly { Note = SciNote.CreateFromNoise(noteId), Length = noteLength };
-                                        func.AddOpcode((CmdNoisePoly)lastNote);
-                                    }
-                                    else
-                                    {
-                                        lastNote = new CmdNote { Note = SciNote.Create(row.Note), Length = noteLength };
-                                        func.AddOpcode((CmdNote)lastNote);
-                                        queueSilence = macroLength.HasValue && chData.Channel == ChannelType.Ch3;
-                                    }
-                                    break;
-                            }
-
-
-                            // Delayed cut
-                            if (silenceLength > 0)
-                                AddSilence(silenceLength);
-
-                            // Delayed effects allow the current note to play (with the necessary automatic delay)
-                            if (row.DelayedEffect.HasValue)
-                            {
-                                var x = row.DelayedEffect.Value;
-                                switch (x.EffectType)
-                                {
-                                    case EffectType.PatternGoto:
-                                        funcWrap.TerminatorGoto = x.EffectParam;
-                                        goto exitPatternLoop;
-                                    case EffectType.PatternSkip:
-                                        funcWrap.TerminatorSkip = x.EffectParam;
-                                        goto exitPatternLoop;
-                                }
-                            }
-
-                            void AddSilence(int length)
-                            {
-                                if (chData.Channel == ChannelType.Ch4)
-                                {
-                                    AddSpecOpcode(new CmdEnvelope()); // "envelope $00", for silence
-                                    lastNote = new CmdExtendNote { Length = length };
-                                    func.AddOpcode((CmdExtendNote)lastNote);
-                                }
-                                else
-                                {
-                                    lastNote = new CmdNote { Length = length };
-                                    func.AddOpcode((CmdNote)lastNote);
-                                }
-                            }
-
-                            void AddSpecOpcode(SndOpcode op)
-                            {
-                                if (lastNote != null)
-                                {
-                                    lastNoteBak = lastNote;
-                                    lastNote = null;
-                                }
-                                func.AddOpcode(op);
-                            }
-
-                            void IncWaited(int amount)
-                            {
-                                if (lastNote != null)
-                                {
-                                    // Continue the previous wait (usually the CmdNote's length)
-                                    lastNote.Length += amount;
-                                }
-                                else
-                                {
-                                    if (lastNoteBak == null || chData.Channel == ChannelType.Ch4)
-                                    {
-                                        // Waiting at the start of a subroutine
-                                        // or the previous note was on the noise channel
-                                        lastNote = new CmdExtendNote { Length = amount };
-                                        func.AddOpcode((CmdExtendNote)lastNote);
-                                    }
-                                    else
-                                    {
-                                        // everything else restarts the note
-                                        lastNote = new CmdWait { Length = amount };
-                                        func.AddOpcode((CmdWait)lastNote);
-                                    }
-                                }
-
-                                // If we passed over the limit, cap the lastNote length and move the remainder to a new silence note
-                                if (queueSilence && lastNote.Length > macroLength)
-                                {
-                                    queueSilence = false;
-                                    var newWait = new CmdNote { Length = lastNote.Length - macroLength };
-                                    func.AddOpcode(newWait);
-                                    lastNote.Length = macroLength;
-                                    lastNote = newWait;
-                                }
-                            }
-
+                                break;
+                            case EffectType.SetEnvelope:
+                                AddSpecOpcode(new CmdEnvelope { Arg = x.EffectParam });
+                                break;
+                            case EffectType.SetTimbre when chData.Channel == ChannelType.Ch3:
+                                AddSpecOpcode(new CmdWaveVol { Vol = x.EffectParam << 6 });
+                                break;
+                            case EffectType.SetTimbre when chData.Channel == ChannelType.Ch4:
+                                noiseLsfr = x.EffectParam << 3;
+                                break;
+                            case EffectType.SetTimbre:
+                                AddSpecOpcode(new CmdDutyCycle { Duty = x.EffectParam });
+                                break;
+                            case EffectType.SetPanning:
+                                // 00 (mute), 01 (left), 10 (right), 11 (both)
+                                var l = x.EffectParam & 0b1;
+                                var r = x.EffectParam >> 1;
+                                AddSpecOpcode(new CmdPanning { Pan = (l << ((int)chData.Channel + 4)) + (r << (int)chData.Channel) });
+                                break;
+                            case EffectType.SetSweep:
+                                AddSpecOpcode(new CmdSweep { Arg = x.EffectParam });
+                                break;
+                            case EffectType.DelayedCut:
+                                // Row has note + silence
+                                noteLength = x.EffectParam;
+                                silenceLength = songSpeed - x.EffectParam;
+                                break;
+                            case EffectType.DelayedNote:
+                                // Row has silence + note
+                                IncWaited(x.EffectParam);
+                                noteLength -= x.EffectParam;
+                                break;
+                            case EffectType.Lock:
+                                break;
+                            case EffectType.Arpeggio:
+                                break;
+                            case EffectType.PitchUp:
+                                break;
+                            case EffectType.PitchDown:
+                                break;
+                            case EffectType.AutoPortamento:
+                                break;
+                            case EffectType.Vibrato: // This kind of Vibrato isn't supported, use instruments instead
+                                break;
+                            case EffectType.VibratoDelay:
+                                break;
+                            case EffectType.Tuning:
+                                AddSpecOpcode(new CmdFineTuneValue { Offset = x.EffectParam - 0x80 });
+                                break;
+                            case EffectType.NoteSlideUp:
+                                break;
+                            case EffectType.NoteSlideDown:
+                                break;
+                            case EffectType.SetGlobalVolume:
+                                break;
                         }
-                    exitPatternLoop:
+                    }
 
-                        // Optimization round
-                        // Delete duplicate consecutive wait lengths.
-                        // Not applicable on the noise channel, every wait matters there
-                        var lastLen = -1;
-                        if (chData.Channel != ChannelType.Ch4)
-                            foreach (var op in func.Opcodes.OfType<ICmdNote>())
+                    switch (row.Note)
+                    {
+                        case 85:
+                            AddSilence(noteLength);
+                            break;
+                        case 0:
+                            if (noteLength > 0)
+                                IncWaited(noteLength);
+                            break;
+                        default:
+                            if (usesVibratos)
                             {
-                                Debug.Assert(op.Length != null);
-                                if (op.Length == lastLen && (op is CmdNote || op is CmdNoisePoly))
-                                    op.Length = null; // combo
-                                else
-                                    lastLen = op.Length.Value;
+                                var curVib = vibratoMap.ContainsKey(row.Instrument.GetValueOrDefault()) ? vibratoMap[row.Instrument.GetValueOrDefault()] : (int?)null;
+                                if (curVib != lastVibrato)
+                                {
+                                    func.AddOpcode(curVib.HasValue ? new CmdVibratoOp { VibratoId = curVib.Value } : new CmdClrVibrato());
+                                    lastVibrato = curVib;
+                                }
                             }
 
-                        funcs.Add(i, funcWrap);
+                            if (chData.Channel == ChannelType.Ch4)
+                            {
+                                var noteId = SciNote.NoiseNoteTable[row.Note - 1] + noiseLsfr;
+                                lastNote = new CmdNoisePoly { Note = SciNote.CreateFromNoise(noteId), Length = noteLength };
+                                func.AddOpcode((CmdNoisePoly)lastNote);
+                            }
+                            else
+                            {
+                                lastNote = new CmdNote { Note = SciNote.Create(row.Note), Length = noteLength };
+                                func.AddOpcode((CmdNote)lastNote);
+                                queueSilence = macroLength.HasValue && chData.Channel == ChannelType.Ch3;
+                            }
+                            break;
+                    }
+
+
+                    // Delayed cut
+                    if (silenceLength > 0)
+                        AddSilence(silenceLength);
+
+                    // Delayed effects allow the current note to play (with the necessary automatic delay)
+                    if (row.DelayedEffect.HasValue)
+                    {
+                        var x = row.DelayedEffect.Value;
+                        switch (x.EffectType)
+                        {
+                            case EffectType.PatternGoto:
+                                funcWrap.TerminatorGoto = x.EffectParam;
+                                goto exitPatternLoop;
+                            case EffectType.PatternSkip:
+                                funcWrap.TerminatorSkip = x.EffectParam;
+                                goto exitPatternLoop;
+                        }
+                    }
+
+                    void AddSilence(int length)
+                    {
+                        if (chData.Channel == ChannelType.Ch4)
+                        {
+                            AddSpecOpcode(new CmdEnvelope()); // "envelope $00", for silence
+                            lastNote = new CmdExtendNote { Length = length };
+                            func.AddOpcode((CmdExtendNote)lastNote);
+                        }
+                        else
+                        {
+                            lastNote = new CmdNote { Length = length };
+                            func.AddOpcode((CmdNote)lastNote);
+                        }
+                    }
+
+                    void AddSpecOpcode(SndOpcode op)
+                    {
+                        if (lastNote != null)
+                        {
+                            lastNoteBak = lastNote;
+                            lastNote = null;
+                        }
+                        func.AddOpcode(op);
+                    }
+
+                    void IncWaited(int amount)
+                    {
+                        if (lastNote != null)
+                        {
+                            // Continue the previous wait (usually the CmdNote's length)
+                            lastNote.Length += amount;
+                        }
+                        else
+                        {
+                            if (lastNoteBak == null || chData.Channel == ChannelType.Ch4)
+                            {
+                                // Waiting at the start of a subroutine
+                                // or the previous note was on the noise channel
+                                lastNote = new CmdExtendNote { Length = amount };
+                                func.AddOpcode((CmdExtendNote)lastNote);
+                            }
+                            else
+                            {
+                                // everything else restarts the note
+                                lastNote = new CmdWait { Length = amount };
+                                func.AddOpcode((CmdWait)lastNote);
+                            }
+                        }
+
+                        // If we passed over the limit, cap the lastNote length and move the remainder to a new silence note
+                        if (queueSilence && lastNote.Length > macroLength)
+                        {
+                            queueSilence = false;
+                            var newWait = new CmdNote { Length = lastNote.Length - macroLength };
+                            func.AddOpcode(newWait);
+                            lastNote.Length = macroLength;
+                            lastNote = newWait;
+                        }
                     }
 
                 }
+            exitPatternLoop:
 
                 // Optimization round
-                // If only one wave ID is used, delete all refs and replace them with a single one.
-                // Could be improved in the future by emulating the command handler and keeping track of wave changes that matter.
-                if (chData.Channel == ChannelType.Ch3 && initialWave != null)
-                {
-                    var allWaveChg = funcs.SelectMany(x => x.Value.Func.Opcodes.OfType<CmdWave>()).ToArray();
-                    var grp = allWaveChg.GroupBy(x => x.WaveId).ToArray();
-                    if (grp.Length == 1 && grp[0].Key == initialWave.WaveId)
+                // Delete duplicate consecutive wait lengths.
+                // Not applicable on the noise channel, every wait matters there
+                var lastLen = -1;
+                if (chData.Channel != ChannelType.Ch4)
+                    foreach (var op in func.Opcodes.OfType<ICmdNote>())
                     {
-                        foreach (var x in allWaveChg)
-                            x.Parent.Opcodes.Remove(x);
-                        initialWave.WaveId = allWaveChg[0].WaveId;
+                        Debug.Assert(op.Length != null);
+                        if (op.Length == lastLen && (op is CmdNote || op is CmdNoisePoly))
+                            op.Length = null; // combo
+                        else
+                            lastLen = op.Length.Value;
                     }
-                }
 
-                // Build the main function
-                var doneOutput = new HashSet<int>();
+                funcs.Add(i, funcWrap);
+            }
 
-                // This maps to the .P1 / .P2 / ... local labels in the main func
-                // Jumps don't go forward so we should be fine adding to this as we go.
-                var funcStartOpcodes = new Dictionary<int, SndOpcode>(); // <pattern id, jump target>
+        }
 
-                for (var i = 0; i < chData.TrackOrder.Length; i++)
-                {
-                    var trackId = chData.TrackOrder[i];
-                    if (!funcs.TryGetValue(trackId, out var pat))
-                    {
-                        // Hit a skipped line
-                    }
-                    else if (canInline[trackId])
-                    {
-                        funcStartOpcodes[i] = pat.Func.Opcodes[0];
-                        funcStartOpcodes[i].Label = $".P{i:X2}";
-
-                        // This inline branch assumes that inlined patterns are only called once.
-                        // If that's not the case, the following will happen:
-                        // - Duplicate terminator commands to the pattern
-                        // - Lost opcodes from duplicate object instances
-
-                        if (pat.StopCh)
-                            pat.Func.AddOpcode(new CmdChanStop());
-                        else if (pat.TerminatorGoto.HasValue)
-                        {
-                            if (funcStartOpcodes.TryGetValue(pat.TerminatorGoto.Value, out var target))
-                                pat.Func.AddOpcode(new CmdLoop { Target = target });
-                            else
-                                Console.WriteLine($"CmdLoop failure: {pat.TerminatorGoto} (limit: {chData.TrackOrder.Length})");
-                        }
-                        else if (pat.TerminatorSkip.GetValueOrDefault() != 0) // PatternSkip 0 is ret (and ret is ignored on inlined funcs)
-                            Console.WriteLine("PatternSkip > 0 not implemented");
-
-                        // Reassign all opcodes inside to Main
-                        foreach (var x in pat.Func.Opcodes)
-                            resCh.Data.Main.AddOpcode(x);
-                    }
-                    else
-                    {
-                        var callOp = new CmdCall { Target = pat.Func.Opcodes[0] };
-                        funcStartOpcodes[i] = callOp;
-                        funcStartOpcodes[i].Label = $".P{i:X2}";
-                        resCh.Data.Main.AddOpcode(callOp);
-                        
-                        if (doneOutput.Add(trackId))
-                        {
-                            resCh.Data.Subs.Add(pat.Func);
-
-                            if (pat.StopCh)
-                                pat.Func.AddOpcode(new CmdChanStop());
-                            else if (pat.TerminatorGoto.HasValue && pat.TerminatorGoto.Value != chData.TrackOrder[0])
-                                Console.WriteLine("PatternGoto not pointing to top is not allowed on patterns used more than once.");
-                            else if (pat.TerminatorSkip.GetValueOrDefault() != 0) // PatternSkip 0 is ret
-                                Console.WriteLine("PatternSkip > 0 not implemented");
-                            else
-                                pat.Func.AddOpcode(new CmdRet());
-                        }
-                    }
-                }
-
-                // If the last pattern doesn't end in CmdLoop or CmdChanStop, add an explicit loop to the first pattern at the end of main
-                if (funcStartOpcodes.Count > 0)
-                {
-                    if (funcs.TryGetValue(chData.TrackOrder.Last(), out var lastPat))
-                    {
-                        if (lastPat.Func.Opcodes.Last() is not CmdLoop && !lastPat.StopCh)
-                            resCh.Data.Main.AddOpcode(new CmdLoop { Target = funcStartOpcodes.First().Value });
-                    }
-                    else
-                        Console.WriteLine($"lastPat failure: {chData.TrackOrder.Last()}");
-                }
-                
-                res.Channels.Add(resCh);
+        // Optimization round
+        // If only one wave ID is used, delete all refs and replace them with a single one.
+        // Could be improved in the future by emulating the command handler and keeping track of wave changes that matter.
+        if (chData.Channel == ChannelType.Ch3 && initialWave != null)
+        {
+            var allWaveChg = funcs.SelectMany(x => x.Value.Func.Opcodes.OfType<CmdWave>()).ToArray();
+            var grp = allWaveChg.GroupBy(x => x.WaveId).ToArray();
+            if (grp.Length == 1 && grp[0].Key == initialWave.WaveId)
+            {
+                foreach (var x in allWaveChg)
+                    x.Parent.Opcodes.Remove(x);
+                initialWave.WaveId = allWaveChg[0].WaveId;
             }
         }
+
+        // Build the main function
+        var doneOutput = new HashSet<int>();
+
+        // This maps to the .P1 / .P2 / ... local labels in the main func
+        // Jumps don't go forward so we should be fine adding to this as we go.
+        var funcStartOpcodes = new Dictionary<int, SndOpcode>(); // <pattern id, jump target>
+
+        for (var i = 0; i < chData.TrackOrder.Length; i++)
+        {
+            var trackId = chData.TrackOrder[i];
+            if (!funcs.TryGetValue(trackId, out var pat))
+            {
+                // Hit a skipped line
+            }
+            else if (canInline[trackId])
+            {
+                funcStartOpcodes[i] = pat.Func.Opcodes[0];
+                funcStartOpcodes[i].Label = $".P{i:X2}";
+
+                // This inline branch assumes that inlined patterns are only called once.
+                // If that's not the case, the following will happen:
+                // - Duplicate terminator commands to the pattern
+                // - Lost opcodes from duplicate object instances
+
+                if (pat.StopCh)
+                    pat.Func.AddOpcode(new CmdChanStop());
+                else if (pat.TerminatorGoto.HasValue)
+                {
+                    if (funcStartOpcodes.TryGetValue(pat.TerminatorGoto.Value, out var target))
+                        pat.Func.AddOpcode(new CmdLoop { Target = target });
+                    else
+                        Console.WriteLine($"CmdLoop failure: {pat.TerminatorGoto} (limit: {chData.TrackOrder.Length})");
+                }
+                else if (pat.TerminatorSkip.GetValueOrDefault() != 0) // PatternSkip 0 is ret (and ret is ignored on inlined funcs)
+                    Console.WriteLine("PatternSkip > 0 not implemented");
+
+                // Reassign all opcodes inside to Main
+                foreach (var x in pat.Func.Opcodes)
+                    resCh.Data.Main.AddOpcode(x);
+            }
+            else
+            {
+                var callOp = new CmdCall { Target = pat.Func.Opcodes[0] };
+                funcStartOpcodes[i] = callOp;
+                funcStartOpcodes[i].Label = $".P{i:X2}";
+                resCh.Data.Main.AddOpcode(callOp);
+
+                if (doneOutput.Add(trackId))
+                {
+                    resCh.Data.Subs.Add(pat.Func);
+
+                    if (pat.StopCh)
+                        pat.Func.AddOpcode(new CmdChanStop());
+                    else if (pat.TerminatorGoto.HasValue && pat.TerminatorGoto.Value != chData.TrackOrder[0])
+                        Console.WriteLine("PatternGoto not pointing to top is not allowed on patterns used more than once.");
+                    else if (pat.TerminatorSkip.GetValueOrDefault() != 0) // PatternSkip 0 is ret
+                        Console.WriteLine("PatternSkip > 0 not implemented");
+                    else
+                        pat.Func.AddOpcode(new CmdRet());
+                }
+            }
+        }
+
+        // If the last pattern doesn't end in CmdLoop or CmdChanStop, add an explicit loop to the first pattern at the end of main
+        if (funcStartOpcodes.Count > 0)
+        {
+            if (funcs.TryGetValue(chData.TrackOrder.Last(), out var lastPat))
+            {
+                if (lastPat.Func.Opcodes.Last() is not CmdLoop && !lastPat.StopCh)
+                    resCh.Data.Main.AddOpcode(new CmdLoop { Target = funcStartOpcodes.First().Value });
+            }
+            else
+                Console.WriteLine($"lastPat failure: {chData.TrackOrder.Last()}");
+        }
+
+        res.Channels.Add(resCh);
     }
 
 }
