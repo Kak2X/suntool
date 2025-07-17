@@ -62,11 +62,16 @@ public class TbmConversion
 
             var song = srcSong.ToPretty();
             var id = PtrTbl.Songs.Count + 1;
+
+            // Autodetect an appropriate song name
+            var songName = song.Name != null && song.Name != "New song" 
+                ? song.Name 
+                : sheetSong.Title;
             var res = new SndHeader
             {
                 Id = id,
-                Name = sheetSong.Title != null
-                     ? (sheetSong.Module.Songs.Length != 1 ? $"{id:X2}_" : string.Empty) + LabelNormalizer.Apply(sheetSong.Title)
+                Name = songName != null
+                     ? $"{id:X2}_" + LabelNormalizer.Apply(songName)
                      : $"{id:X2}",
                 Kind = sheetSong.Kind,
                 ChannelCount = 0
@@ -496,13 +501,24 @@ public class TbmConversion
             }
         }
 
-        // If the last pattern doesn't end in CmdLoop or CmdChanStop, add an explicit loop to the first pattern at the end of main
+        // If the last pattern doesn't end in CmdLoop or CmdChanStop, add either to the first pattern at the end of main
         if (funcStartOpcodes.Count > 0)
         {
             if (funcs.TryGetValue(chData.TrackOrder.Last(), out var lastPat))
             {
                 if (lastPat.Func.Opcodes.Last() is not CmdLoop && !lastPat.StopCh)
-                    resCh.Data.Main.AddOpcode(new CmdLoop { Target = funcStartOpcodes.First().Value });
+                { 
+                    if (sheetSong.Kind == SongKind.BGM)
+                    {
+                        Console.WriteLine($"Ch{((int)chData.Channel + 1)}: Last pattern doesn't end with Loop/ChanStop, added Loop to start.");
+                        resCh.Data.Main.AddOpcode(new CmdLoop { Target = funcStartOpcodes.First().Value });
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Ch{((int)chData.Channel + 1)}: Last pattern doesn't end with Loop/ChanStop, added ChanStop.");
+                        resCh.Data.Main.AddOpcode(new CmdChanStop());
+                    }
+                }
             }
             else
                 Console.WriteLine($"lastPat failure: {chData.TrackOrder.Last()}");
