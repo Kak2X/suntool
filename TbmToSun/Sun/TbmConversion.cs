@@ -58,6 +58,8 @@ public class TbmConversion
 
         foreach (var srcSong in sheetSong.Module.Songs)
         {
+            Console.WriteLine($"---> {srcSong.Name}");
+
             var song = srcSong.ToPretty();
             var id = PtrTbl.Songs.Count + 1;
             var res = new SndHeader
@@ -158,6 +160,7 @@ public class TbmConversion
                 int? lastVibrato = -1;
                 int? lastWaveId = null;
 
+                var j = 0;
                 foreach (var row in pattern.Rows)
                 {
                     // If a (wave) row specifies an instrument, immediately get the new cutoff length value
@@ -292,7 +295,16 @@ public class TbmConversion
 
                             if (chData.Channel == ChannelType.Ch4)
                             {
-                                var noteId = SciNote.NoiseNoteTable[row.Note - 1] + noiseLsfr;
+                                int noteId;
+                                if (row.Note >= SciNote.NoiseNoteTable.Length)
+                                {
+                                    Console.WriteLine($"WARNING: Row Ch{((int)chData.Channel + 1)}.{i}.{j} contains out of range note ID {row.Note}, replacing with max value.");
+                                    noteId = SciNote.NoiseNoteTable[^1] + noiseLsfr;
+                                }
+                                else
+                                {
+                                    noteId = SciNote.NoiseNoteTable[row.Note - 1] + noiseLsfr;
+                                }
                                 lastNote = new CmdNoisePoly { Note = SciNote.CreateFromNoise(noteId), Length = noteLength };
                                 func.AddOpcode((CmdNoisePoly)lastNote);
                             }
@@ -384,7 +396,7 @@ public class TbmConversion
                             lastNote = newWait;
                         }
                     }
-
+                    j++;
                 }
             exitPatternLoop:
 
@@ -404,7 +416,6 @@ public class TbmConversion
 
                 funcs.Add(i, funcWrap);
             }
-
         }
 
         // Optimization round
