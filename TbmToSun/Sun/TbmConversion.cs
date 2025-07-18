@@ -82,6 +82,23 @@ public class TbmConversion
             DoChannel(song.Ch3, sheetSong, waveMap, vibratoMap, macroLenMap, song, res);
             DoChannel(song.Ch4, sheetSong, waveMap, vibratoMap, macroLenMap, song, res);
 
+            // Detect any gaps between sound channels, since the sound driver doesn't allow them
+            for (var i = 0; i < res.Channels.Count - 1; i++)
+            {
+                var expectedNext = res.Channels[i].SoundChannelPtr.Next();
+                var target = res.Channels[i + 1].SoundChannelPtr.Normalize();
+                for (var j = expectedNext.Normalize(); j < target; j++, i++, expectedNext = expectedNext.Next())
+                {
+                    res.Channels.Insert(i + 1, new SndChHeader
+                    {
+                        SoundChannelPtr = expectedNext,
+                        Parent = res,
+                        Data = null,
+                    });
+                    res.ChannelCount++;
+                }
+            }
+
             PtrTbl.Songs.Add(res);
         }
     }
@@ -97,6 +114,7 @@ public class TbmConversion
             InitialStatus = SndInfoStatus.SIS_ENABLED | (res.Kind == SongKind.SFX ? SndInfoStatus.SIS_SFX : 0),
             Unused = 0x56, // :^)
         };
+        Debug.Assert(resCh.Data != null);
         var initialWave = (CmdWave?)null;
 
         // Define initial commands at the start of a song

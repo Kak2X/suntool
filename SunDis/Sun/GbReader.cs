@@ -182,7 +182,9 @@ public class GbReader
     private void ParseSongChCur(SndHeader songHdr, bool isFirstChannel = false, bool isUnused = false)
     {
         // These are always unique, TryAdd will always return true
+#pragma warning disable CS8670
         var chHeader = new SndChHeader { Parent = songHdr, IsUnused = isUnused, Data = { Main = { IsUnused = isUnused } } };
+#pragma warning restore CS8670
         if (!TryAdd(chHeader, out _))
             throw new InvalidOperationException("How did this happen? (non-unique SndChHeader)");
 
@@ -206,13 +208,16 @@ public class GbReader
         }
 
         // Parse out the sound data
-        Seek(mainPtr, () =>
-        {
-            if (TryGetCurValue(out var existingData))
-                chHeader.Data = ((SndOpcode)existingData.Data).Parent.Parent!;
-            else
-                ParseFuncCur(chHeader.Data.Main);
-        });
+        if (mainPtr.RomAddress == 0)
+            chHeader.Data = null;
+        else
+            Seek(mainPtr, () =>
+            {
+                if (TryGetCurValue(out var existingData))
+                    chHeader.Data = ((SndOpcode)existingData.Data).Parent.Parent!;
+                else
+                    ParseFuncCur(chHeader.Data!.Main);
+            });
     }
 
     private void ParseFuncCur(SndFunc main)

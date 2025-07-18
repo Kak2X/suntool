@@ -55,15 +55,16 @@ public class DataWriter
 
             // Song data
             foreach (var chan in song.Channels)
-            {
-                if (Write(chan.Data.Main))
-                    foreach (var op in chan.Data.Main.Opcodes)
-                        Write(op);
-                foreach (var sub in chan.Data.Subs)
-                    if (Write(sub))
-                        foreach (var op in sub.Opcodes)
+                if (chan.Data != null)
+                {
+                    if (Write(chan.Data.Main))
+                        foreach (var op in chan.Data.Main.Opcodes)
                             Write(op);
-            }
+                    foreach (var sub in chan.Data.Subs)
+                        if (Write(sub))
+                            foreach (var op in sub.Opcodes)
+                                Write(op);
+                }
         }
 
         bool Write(IRomData data)
@@ -81,11 +82,12 @@ public class DataWriter
     {
         foreach (var song in PtrTbl.Songs)
             foreach (var chan in song.Channels)
-            {
-                Optimize(chan.Data.Main);
-                foreach (var sub in chan.Data.Subs)
-                    Optimize(sub);
-            }
+                if (chan.Data != null)
+                {
+                    Optimize(chan.Data.Main);
+                    foreach (var sub in chan.Data.Subs)
+                        Optimize(sub);
+                }
     }
     private static void Optimize(SndFunc func)
     {
@@ -110,11 +112,12 @@ public class DataWriter
         // Clear everything first
         foreach (var song in PtrTbl.Songs)
             foreach (var chan in song.Channels)
-            {
-                Reset(chan.Data.Main);
-                foreach (var sub in chan.Data.Subs)
-                    Reset(sub);
-            }
+                if (chan.Data != null)
+                {
+                    Reset(chan.Data.Main);
+                    foreach (var sub in chan.Data.Subs)
+                        Reset(sub);
+                }
 
         void Reset(SndFunc func)
         {
@@ -174,13 +177,16 @@ public class DataWriter
                 {
                     // Both the sound channel and sound data can point to other songs
                     set.Add(ch.Parent.Id);
-                    set.Add(ch.Data.Parent.Parent.Id);
-                    // And the jump targets, too
-                    foreach (var op in ch.Data.Main.Opcodes.OfType<IHasPointer>())
-                        set.Add(op.Target!.Parent.Parent.Parent.Parent.Id);
-                    foreach (var sub in ch.Data.Subs)
-                        foreach (var op in sub.Opcodes.OfType<IHasPointer>())
+                    if (ch.Data != null)
+                    {
+                        set.Add(ch.Data.Parent.Parent.Id);
+                        // And the jump targets, too
+                        foreach (var op in ch.Data.Main.Opcodes.OfType<IHasPointer>())
                             set.Add(op.Target!.Parent.Parent.Parent.Parent.Id);
+                        foreach (var sub in ch.Data.Subs)
+                            foreach (var op in sub.Opcodes.OfType<IHasPointer>())
+                                set.Add(op.Target!.Parent.Parent.Parent.Parent.Id);
+                    }
                 }
                 dependencies[def.Value.Song.Id] = set;
             }
@@ -213,7 +219,7 @@ public class DataWriter
                 foreach (var song in songs)
                     if (AddSize(song.Song))
                         foreach (var ch in song.Song.Channels)
-                            if (AddSize(ch)) // && AddSize(ch.Data))
+                            if (AddSize(ch) && ch.Data != null) // && AddSize(ch.Data))
                             {
                                 if (AddSize(ch.Data.Main))
                                     foreach (var op in ch.Data.Main.Opcodes)
