@@ -10,16 +10,20 @@ public class VibratoTable : IRomData
     public string? GetLabel() => null;
     public void WriteToDisasm(IMultiWriter sw)
     {
-        if (!_optimized)
-            Optimize();
-        Recount();
-
+        Prepare();
         sw.ChangeFile("driver/data/vibrato.asm");
         sw.WriteLine(Consts.VibratoTblBegin);
         foreach (var x in _vibratos)
             sw.WriteWithLabel(x);
         foreach (var x in _vibratos.Select(x => x.Data).Distinct())
             sw.WriteWithLabel(x);
+    }
+
+    private void Prepare()
+    {
+        if (!_optimized)
+            Optimize();
+        Recount();
     }
 
     private void Recount()
@@ -92,6 +96,7 @@ public class VibratoTable : IRomData
 
     public int FullSizeInRom()
     {
+        Prepare();
         var res = SizeInRom();
         var done = new ObjectSet();
         foreach (var x in _vibratos)
