@@ -28,11 +28,13 @@
         // First usable bank for dumping songs.
         public const int DefaultStartingBank = 1;
 
+        private const int BaseDriverSize = 0x49C1 - 0x4000;
+
         // Default free space in a bank. (for TbmToSun, ignores vibrato & wave since they get written to)
-        public const int FreeSpaceBase = 0x8000 - 0x49b7;
+        public const int FreeSpaceBase = 0x4000 - BaseDriverSize;
 
         // Default free space in a bank. (for SunDis, accounts for vibrato & wave)
-        public const int FreeSpaceSongOnly = 0x8000 - 0x4c23;
+        public const int FreeSpaceSongOnly = FreeSpaceBase - 0x026C;
 
         public const string SndMainBegin = @"mSOUNDBANK 03, 1 ; Main bank, as the last one for GBS compat (TODO: autodivide)
 ;   mSOUNDBANK 02
