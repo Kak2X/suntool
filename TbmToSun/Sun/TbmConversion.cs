@@ -165,24 +165,27 @@ public class TbmConversion
         var funcs = new Dictionary<int, SndFuncWrap>();
         foreach (var i in chData.TrackOrder.Distinct())
         {
+            var func = new SndFunc { Parent = resCh.Data };
+            var funcWrap = new SndFuncWrap
+            {
+                Func = func,
+            };
+
+            // Process rows
+            var lastNote = (ICmdNote?)null;
+            var lastNoteBak = (ICmdNote?)null; // Backup for inspection
+            var macroLength = (int?)null;
+            var queueSilence = false;
+            int? lastVibrato = -1;
+            int? lastWaveId = null;
+
             if (!chData.Tracks.TryGetValue(i, out var pattern))
-                Console.WriteLine($"WARNING: Pattern Ch{((int)chData.Channel + 1)}.{i} is missing, skipping.");
+            {
+                Console.WriteLine($"INFO: Pattern Ch{((int)chData.Channel + 1)}.{i} is missing.");
+                IncWaited(songSpeed * song.RowsPerTrack);
+            }
             else
             {
-                var func = new SndFunc { Parent = resCh.Data };
-                var funcWrap = new SndFuncWrap
-                {
-                    Func = func,
-                };
-
-                // Process rows
-                var lastNote = (ICmdNote?)null;
-                var lastNoteBak = (ICmdNote?)null; // Backup for inspection
-                var macroLength = (int?)null;
-                var queueSilence = false;
-                int? lastVibrato = -1;
-                int? lastWaveId = null;
-
                 var j = 0;
                 foreach (var row in pattern.Rows)
                 {
@@ -359,87 +362,88 @@ public class TbmConversion
                                 goto exitPatternLoop;
                         }
                     }
-
-                    void AddSilence(int length)
-                    {
-                        if (chData.Channel == ChannelType.Ch4)
-                        {
-                            AddSpecOpcode(new CmdEnvelope()); // "envelope $00", for silence
-                            lastNote = new CmdExtendNote { Length = length };
-                            func.AddOpcode((CmdExtendNote)lastNote);
-                        }
-                        else
-                        {
-                            lastNote = new CmdNote { Length = length };
-                            func.AddOpcode((CmdNote)lastNote);
-                        }
-                    }
-
-                    void AddSpecOpcode(SndOpcode op)
-                    {
-                        if (lastNote != null)
-                        {
-                            lastNoteBak = lastNote;
-                            lastNote = null;
-                        }
-                        func.AddOpcode(op);
-                    }
-
-                    void IncWaited(int amount)
-                    {
-                        if (lastNote != null)
-                        {
-                            // Continue the previous wait (usually the CmdNote's length)
-                            lastNote.Length += amount;
-                        }
-                        else
-                        {
-                            if (lastNoteBak == null || chData.Channel == ChannelType.Ch4)
-                            {
-                                // Waiting at the start of a subroutine
-                                // or the previous note was on the noise channel
-                                lastNote = new CmdExtendNote { Length = amount };
-                                func.AddOpcode((CmdExtendNote)lastNote);
-                            }
-                            else
-                            {
-                                // everything else restarts the note
-                                lastNote = new CmdWait { Length = amount };
-                                func.AddOpcode((CmdWait)lastNote);
-                            }
-                        }
-
-                        // If we passed over the limit, cap the lastNote length and move the remainder to a new silence note
-                        if (queueSilence && lastNote.Length > macroLength)
-                        {
-                            queueSilence = false;
-                            var newWait = new CmdNote { Length = lastNote.Length - macroLength };
-                            func.AddOpcode(newWait);
-                            lastNote.Length = macroLength;
-                            lastNote = newWait;
-                        }
-                    }
                     j++;
                 }
-            exitPatternLoop:
-
-                // Optimization round
-                // Delete duplicate consecutive wait lengths.
-                // Not applicable on the noise channel, every wait matters there
-                var lastLen = -1;
-                if (chData.Channel != ChannelType.Ch4)
-                    foreach (var op in func.Opcodes.OfType<ICmdNote>())
-                    {
-                        Debug.Assert(op.Length != null);
-                        if (op.Length == lastLen && (op is CmdNote || op is CmdNoisePoly))
-                            op.Length = null; // combo
-                        else
-                            lastLen = op.Length.Value;
-                    }
-
-                funcs.Add(i, funcWrap);
             }
+            void AddSilence(int length)
+            {
+                if (chData.Channel == ChannelType.Ch4)
+                {
+                    AddSpecOpcode(new CmdEnvelope()); // "envelope $00", for silence
+                    lastNote = new CmdExtendNote { Length = length };
+                    func.AddOpcode((CmdExtendNote)lastNote);
+                }
+                else
+                {
+                    lastNote = new CmdNote { Length = length };
+                    func.AddOpcode((CmdNote)lastNote);
+                }
+            }
+
+            void AddSpecOpcode(SndOpcode op)
+            {
+                if (lastNote != null)
+                {
+                    lastNoteBak = lastNote;
+                    lastNote = null;
+                }
+                func.AddOpcode(op);
+            }
+
+            void IncWaited(int amount)
+            {
+                if (lastNote != null)
+                {
+                    // Continue the previous wait (usually the CmdNote's length)
+                    lastNote.Length += amount;
+                }
+                else
+                {
+                    if (lastNoteBak == null || chData.Channel == ChannelType.Ch4)
+                    {
+                        // Waiting at the start of a subroutine
+                        // or the previous note was on the noise channel
+                        lastNote = new CmdExtendNote { Length = amount };
+                        func.AddOpcode((CmdExtendNote)lastNote);
+                    }
+                    else
+                    {
+                        // everything else restarts the note
+                        lastNote = new CmdWait { Length = amount };
+                        func.AddOpcode((CmdWait)lastNote);
+                    }
+                }
+
+                // If we passed over the limit, cap the lastNote length and move the remainder to a new silence note
+                if (queueSilence && lastNote.Length > macroLength)
+                {
+                    queueSilence = false;
+                    var newWait = new CmdNote { Length = lastNote.Length - macroLength };
+                    func.AddOpcode(newWait);
+                    lastNote.Length = macroLength;
+                    lastNote = newWait;
+                }
+            }
+
+        exitPatternLoop:
+
+            // Optimization round
+            // Delete duplicate consecutive wait lengths.
+            // Not applicable on the noise channel, every wait matters there
+            var lastLen = -1;
+            if (chData.Channel != ChannelType.Ch4)
+                foreach (var op in func.Opcodes.OfType<ICmdNote>())
+                {
+                    Debug.Assert(op.Length != null);
+                    if (op.Length == lastLen && (op is CmdNote || op is CmdNoisePoly))
+                        op.Length = null; // combo
+                    else
+                        lastLen = op.Length.Value;
+                }
+
+            funcs.Add(i, funcWrap);
         }
+        
 
         // Optimization round
         // If only one wave ID is used, delete all refs and replace them with a single one.

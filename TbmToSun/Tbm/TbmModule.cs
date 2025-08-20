@@ -102,6 +102,7 @@ public class TbmModule
     public class PrettySong
     {
         public readonly string Name;
+        public readonly int RowsPerTrack;
         public readonly PrettySongSpeed Speed;
         public readonly PrettyChannel? Ch1;
         public readonly PrettyChannel? Ch2;
@@ -111,6 +112,7 @@ public class TbmModule
         public PrettySong(SongBlock src)
         {
             Name = src.Name;
+            RowsPerTrack = src.RowsPerTrack;
             Speed = new PrettySongSpeed(src.Speed);
 
             var groupedTracks = src.Tracks
