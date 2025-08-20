@@ -69,7 +69,7 @@ namespace TbmToSun
                         "U" => SongKind.Unpause,
                         _ => 0,
                     },
-                    Title = row.Length > 2 ? row[2] : Path.GetFileNameWithoutExtension(row[0]),
+                    Title = row.Length > 2 ? row[2] : Path.GetFileNameWithoutExtension(fullPath),
                 });
             }
             catch (Exception e)
