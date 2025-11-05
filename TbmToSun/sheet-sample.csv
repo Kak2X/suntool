@@ -7,6 +7,11 @@ OutputPath=out\some_folder
 ; If not specified, it defaults to BANK 0x01.
 StartingBank=0x01
 
+; If needed, it's possible to override the amount of free space in a bank, used to autodistribute tracks.
+; The amount of free space is: <Bank size> - <Driver code size> - <Frequency table size>
+; This can be useful when using the converter against a modified sound driver. 
+; SplitOn=0x3000
+
 ; Include individual files
 ; Files start <path>,<[B]gm/[S]fx/[P]ause/[U]npause>,<title override>
 src\bgm_test_a.tbm,B ; Inline comment

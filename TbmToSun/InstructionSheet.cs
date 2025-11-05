@@ -24,7 +24,7 @@ namespace TbmToSun
                     else if (cmd.StartsWith("InputPath="))
                         inputPath = cmd.Split('=')[1];
                     else if (cmd.StartsWith("SplitOn="))
-                        SplitOn = int.Parse(cmd.Split('=')[1]);
+                        SplitOn = Convert.ToInt32(cmd.Split('=')[1], 16);
                     else if (cmd.StartsWith("StartingBank="))
                         StartingBank = Convert.ToInt32(cmd.Split('=')[1], 16);
                     else
