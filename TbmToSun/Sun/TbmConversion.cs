@@ -74,7 +74,8 @@ public class TbmConversion
                      ? $"{id:X2}_" + LabelNormalizer.Apply(songName)
                      : $"{id:X2}",
                 Kind = sheetSong.Kind,
-                ChannelCount = 0
+                Priority = sheetSong.Priority,
+                ChannelCount = 0,
             };
 
             DoChannel(song.Ch1, sheetSong, waveMap, vibratoMap, macroLenMap, song, res);
@@ -161,6 +162,11 @@ public class TbmConversion
                     goto vibratoCheckDone;
                 }
             vibratoCheckDone:
+
+        // If this is a sound effect with high priority, set appropriate parameter to chan_stop
+        var priorityType = sheetSong.Priority == SongPriority.High
+            ? (chData.Channel == ChannelType.Ch4 ? PriorityGroup.SNP_SFX4 : PriorityGroup.SNP_SFXMULTI)
+            : (PriorityGroup?)null;
 
         var funcs = new Dictionary<int, SndFuncWrap>();
         foreach (var i in chData.TrackOrder.Distinct())
@@ -485,7 +491,7 @@ public class TbmConversion
                 // - Lost opcodes from duplicate object instances
 
                 if (pat.StopCh)
-                    pat.Func.AddOpcode(new CmdChanStop());
+                    pat.Func.AddOpcode(new CmdChanStop { Priority = priorityType });
                 else if (pat.TerminatorGoto.HasValue)
                 {
                     if (funcStartOpcodes.TryGetValue(pat.TerminatorGoto.Value, out var target))
@@ -512,7 +518,7 @@ public class TbmConversion
                     resCh.Data.Subs.Add(pat.Func);
 
                     if (pat.StopCh)
-                        pat.Func.AddOpcode(new CmdChanStop());
+                        pat.Func.AddOpcode(new CmdChanStop { Priority = priorityType });
                     else if (pat.TerminatorGoto.HasValue && pat.TerminatorGoto.Value != chData.TrackOrder[0])
                         Console.WriteLine("PatternGoto not pointing to top is not allowed on patterns used more than once.");
                     else if (pat.TerminatorSkip.GetValueOrDefault() != 0) // PatternSkip 0 is ret
@@ -538,7 +544,7 @@ public class TbmConversion
                     else
                     {
                         Console.WriteLine($"Ch{((int)chData.Channel + 1)}: Last pattern doesn't end with Loop/ChanStop, added ChanStop.");
-                        resCh.Data.Main.AddOpcode(new CmdChanStop());
+                        resCh.Data.Main.AddOpcode(new CmdChanStop { Priority = priorityType });
                     }
                 }
             }

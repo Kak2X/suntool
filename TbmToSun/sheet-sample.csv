@@ -13,10 +13,13 @@ StartingBank=0x01
 ; SplitOn=0x3000
 
 ; Include individual files
-; Files start <path>,<[B]gm/[S]fx/[P]ause/[U]npause>,<title override>
+; Files start <path>,<[B]gm/[S]fx/[P]ause/[U]npause>.<priority (SFX only)>,<title override>
 src\bgm_test_a.tbm,B ; Inline comment
 src\bgm_test_b.tbm,B,01_NameOverride
-src\sfx_test_c.tbm,S
+src\sfx_test_c_norm.tbm,S ; Normal priority sound effect
+src\sfx_test_d_high.tbm,S.H ; High priority sound effect
+src\sfx_test_e_norm.tbm,S.N ; Normal priority sound effect
+src\sfx_test_f_low_.tbm,S.L ; Low priority sound effect
 C:\somewhere\src\bgm_pause.tbm,P
 src\bgm_unpause.tbm,U
 

@@ -57,11 +57,12 @@ namespace TbmToSun
             try
             {
                 using var input = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
+                var types = row[1].ToUpperInvariant().Split('.');
                 Rows.Add(new InstructionSong
                 {
                     Path = fullPath,
                     Module = new TbmModule(input),
-                    Kind = row[1].ToUpperInvariant() switch
+                    Kind = types[0] switch
                     {
                         "B" => SongKind.BGM,
                         "S" => SongKind.SFX,
@@ -69,6 +70,13 @@ namespace TbmToSun
                         "U" => SongKind.Unpause,
                         _ => 0,
                     },
+                    Priority = types.Length > 1 && types[0] == "S" ? types[1] switch
+                    {
+                        "H" => SongPriority.High,
+                        "N" => SongPriority.Default,
+                        "L" => SongPriority.Low,
+                        _ => SongPriority.Default,
+                    } : SongPriority.Default,
                     Title = row.Length > 2 ? row[2] : Path.GetFileNameWithoutExtension(fullPath),
                 });
             }
@@ -83,6 +91,7 @@ namespace TbmToSun
         public required string Path;
         public required TbmModule Module;
         public SongKind Kind;
+        public SongPriority Priority;
         public string? Title;
     }
 }

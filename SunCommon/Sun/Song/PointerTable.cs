@@ -22,6 +22,13 @@ public class PointerTable : IRomData
             sw.Write(Consts.SndListBegin);
             foreach (var song in Songs)
             {
+                var priorityMarker = song.Priority switch
+                {
+                    SongPriority.Default => string.Empty,
+                    SongPriority.Low => Consts.SndInitPriorityLow,
+                    SongPriority.High => Consts.SndInitPriorityHi,
+                    _ => string.Empty,
+                };
                 var initCode = song.Kind switch
                 {
                     SongKind.Pause => Consts.SndInitPause,
@@ -29,9 +36,9 @@ public class PointerTable : IRomData
                     SongKind.BGM => Consts.SndInitNewBgm,
                     _ => song.Channels.Min(x => x.SoundChannelPtr) switch
                     {
-                        SndChPtrNum.SND_CH1_PTR => Consts.SndInitNewSfx1234,
-                        SndChPtrNum.SND_CH2_PTR or SndChPtrNum.SND_CH3_PTR => Consts.SndInitNewSfx234,
-                        SndChPtrNum.SND_CH4_PTR => Consts.SndInitNewSfx4,
+                        SndChPtrNum.SND_CH1_PTR => Consts.SndInitNewSfx1234 + priorityMarker,
+                        SndChPtrNum.SND_CH2_PTR or SndChPtrNum.SND_CH3_PTR => Consts.SndInitNewSfx234 + priorityMarker,
+                        SndChPtrNum.SND_CH4_PTR => Consts.SndInitNewSfx4 + priorityMarker,
                         _ => Consts.SndInitDummy,
                     },
                 };

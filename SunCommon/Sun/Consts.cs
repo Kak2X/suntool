@@ -63,6 +63,8 @@ ENDC
         public const string SndInitNewSfx1234 = "Sound_StartNewSFX1234";
         public const string SndInitNewSfx234 = "Sound_StartNewSFX234";
         public const string SndInitNewSfx4 = "Sound_StartNewSFX4";
+        public const string SndInitPriorityHi = "Hi";
+        public const string SndInitPriorityLow = "Lo";
         public const string SndInitDummy = "Sound_SndListTable_Main";
         public const string SndListEndMarker = ".end:";
     }
