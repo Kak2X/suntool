@@ -28,7 +28,7 @@
         // First usable bank for dumping songs.
         public const int DefaultStartingBank = 1;
 
-        private const int BaseDriverSize = 0x49C1 - 0x4000;
+        private const int BaseDriverSize = 0x49F0 - 0x4000;
 
         // Default free space in a bank. (for TbmToSun, ignores vibrato & wave since they get written to)
         public const int FreeSpaceBase = 0x4000 - BaseDriverSize;
