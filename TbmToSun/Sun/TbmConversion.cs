@@ -1,5 +1,6 @@
 ﻿using SunCommon;
 using SunCommon.Util;
+using System;
 using System.Diagnostics;
 using static TbmToSun.TbmModule;
 
@@ -32,15 +33,52 @@ public class TbmConversion
 
     private void Convert(InstructionSong sheetSong)
     {
-        // Build the mappings to the module's Waves/Vibratos IDs to our IDs
+        // Generate all "pretty" versions of the songs
+        var prettySongs = sheetSong.Module.Songs.Select(x => x.ToPretty()).ToArray();
+
+        // Scan forward for waveforms and instruments that the module actually uses.
+        // These go off the "relative IDs" specific to the module, which will be filtered when building the actual mappings.
+        var usedWaves = new HashSet<int>();
+        var usedVibratos = new HashSet<int>();
+        foreach (var song in prettySongs)
+        {
+            if (song.Ch3 != null)
+            {
+                // If the song has a wave channel, the first waveform is implicitly used. (See initial commands on DoChannel)
+                if (sheetSong.Module.Waves.Length > 0)
+                    usedWaves.Add(sheetSong.Module.Waves[0].Id);
+
+                foreach (var track in song.Ch3.Tracks)
+                    foreach (var row in track.Value.Rows)
+                    {
+                        // Wave ID from instrument
+                        if (sheetSong.Module.TryGetInstrumentWaveId(row.Instrument, out var relWaveId))
+                            usedWaves.Add(relWaveId);
+                        // Wave ID from envelope change
+                        foreach (var effect in row.Effects)
+                            if (effect.EffectType == EffectType.SetEnvelope)
+                                usedWaves.Add(effect.EffectParam);
+                    }
+            }
+
+            // Vibrato ID from Instrument ID
+            foreach (var ch in song.ChAll)
+                foreach (var track in ch.Tracks)
+                    foreach (var row in track.Value.Rows)
+                        if (row.Instrument.HasValue)
+                            usedVibratos.Add(row.Instrument.Value);
+        }
+
+        // Build the mappings to the module's Waves/Vibratos IDs to our IDs.
         var waveMap = new Dictionary<int, int>();
         foreach (var x in sheetSong.Module.Waves)
-            waveMap[x.Id] = Waves.Push(x.Data, x.Name);
+            if (usedWaves.Contains(x.Id))
+                waveMap[x.Id] = Waves.Push(x.Data, x.Name);
 
         var vibratoMap = new Dictionary<int, int>();
         foreach (var x in sheetSong.Module.Instruments)
         {
-            if (x.SeqPitch.Data.Length > 0)
+            if (x.SeqPitch.Data.Length > 0 && usedVibratos.Contains(x.Id))
             {
                 // TBM vibratos use relative values.
                 // Our vibratos use absolute values.
@@ -56,11 +94,12 @@ public class TbmConversion
 
         var macroLenMap = sheetSong.Module.Instruments.ToDictionary(x => x.Id, x => x.MacroLength);
 
-        foreach (var srcSong in sheetSong.Module.Songs)
+        for (var relId = 0; relId < sheetSong.Module.Songs.Length; relId++)
         {
+            var srcSong = sheetSong.Module.Songs[relId];
             Console.WriteLine($"---> {srcSong.Name}");
 
-            var song = srcSong.ToPretty();
+            var song = prettySongs[relId];
             var id = PtrTbl.Songs.Count + 1;
 
             // Autodetect an appropriate song name
@@ -138,6 +177,10 @@ public class TbmConversion
                 {
                     initialWave = new CmdWave { WaveId = waveMap.First().Value + 1 };
                     resCh.Data.Main.AddOpcode(initialWave);
+                } 
+                else
+                {
+                    Console.WriteLine($"Ch3: The song has no waveforms defined, the wave channel won't sound correct.");
                 }
                 break;
             case ChannelType.Ch4:
@@ -202,17 +245,20 @@ public class TbmConversion
 
                         // Instrument ID also determines wave ID
                         if (chData.Channel == ChannelType.Ch3)
-                            if (row.Instrument.HasValue)
-                                if (sheetSong.Module.Instruments.TryGetValue(row.Instrument.Value, out var instr))
-                                    if (instr.Channel == ChannelType.Ch3)
-                                        if (instr.EnvelopeEnabled == true)
-                                            if (instr.Envelope.HasValue)
-                                                if (waveMap.TryGetValue(instr.Envelope.Value, out var waveId))
-                                                    if (waveId != lastWaveId)
-                                                    {
-                                                        AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
-                                                        lastWaveId = waveId;
-                                                    }
+                            if (sheetSong.Module.TryGetInstrumentWaveId(row.Instrument, out var relWaveId))
+                                if (waveMap.TryGetValue(relWaveId, out var waveId))
+                                {
+                                    if (waveId != lastWaveId)
+                                    {
+                                        AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
+                                        lastWaveId = waveId;
+                                    }
+                                } 
+                                else
+                                {
+                                    Console.WriteLine($"UHOH: Row Ch{((int)chData.Channel + 1)}.{i}.{j} is using invalid Wave {waveId}.");
+                                }
+                                    
                     }
 
                     // Base length for this row.
@@ -242,11 +288,17 @@ public class TbmConversion
                                 break;
                             case EffectType.SetEnvelope when chData.Channel == ChannelType.Ch3:
                                 if (waveMap.TryGetValue(x.EffectParam, out var waveId))
+                                {
                                     if (waveId != lastWaveId)
                                     {
                                         lastWaveId = waveId;
                                         AddSpecOpcode(new CmdWave { WaveId = waveId + 1 });
                                     }
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"UHOH: Row Ch{((int)chData.Channel + 1)}.{i}.{j} is using invalid Wave {waveId}.");
+                                }
                                 break;
                             case EffectType.SetEnvelope:
                                 AddSpecOpcode(new CmdEnvelope { Arg = x.EffectParam });

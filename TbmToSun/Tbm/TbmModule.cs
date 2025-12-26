@@ -84,6 +84,21 @@ public class TbmModule
 
     }
 
+    public bool TryGetInstrumentWaveId(int? instrumentId, out int waveId)
+    {
+        if (instrumentId.HasValue)
+            if (Instruments.TryGetValue(instrumentId.Value, out var instr))
+                if (instr.Channel == ChannelType.Ch3)
+                    if (instr.EnvelopeEnabled == true)
+                        if (instr.Envelope.HasValue)
+                        {
+                            waveId = instr.Envelope.Value;
+                            return true;
+                        }
+        waveId = -1;
+        return false;
+    }
+
     public readonly struct PrettySongSpeed
     {
         public readonly decimal Decimal;
@@ -108,6 +123,22 @@ public class TbmModule
         public readonly PrettyChannel? Ch2;
         public readonly PrettyChannel? Ch3;
         public readonly PrettyChannel? Ch4;
+        public IReadOnlyList<PrettyChannel> ChAll
+        {
+            get
+            {
+                var res = new List<PrettyChannel>(4);
+                if (Ch1 != null)
+                    res.Add(Ch1);
+                if (Ch2 != null)
+                    res.Add(Ch2);
+                if (Ch3 != null)
+                    res.Add(Ch3);
+                if (Ch4 != null)
+                    res.Add(Ch4);
+                return res;
+            }
+        }
 
         public PrettySong(SongBlock src)
         {
