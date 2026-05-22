@@ -47,7 +47,11 @@ public class GbReader
             {
                 var songHdr = new SndHeader { Id = songId, Name = $"{songId:X02}" };
                 var songHdrGb = new GbData(GbPtrPool.Create(S.Position), songHdr);
-                songHdr.ChannelCount = S.ReadByte();
+
+                var hdrFlags = S.ReadByte();
+                songHdr.Flags = (SongHeaderFlags)(hdrFlags & (int)SongHeaderFlags.SDF_BANKED);
+                songHdr.ChannelCount = hdrFlags & (0xFF ^ (int)SongHeaderFlags.SDF_BANKED);
+
                 if (songHdr.ChannelCount > 4 || songHdr.ChannelCount <= 0)
                     Console.WriteLine($"Song {songId.AsHexByte()} at {songHdrGb.Location.ToBankString()} probably points to code.");
                 else
@@ -192,9 +196,23 @@ public class GbReader
 
         chHeader.InitialStatus = (SndInfoStatus)S.ReadByte();
         chHeader.SoundChannelPtr = (SndChPtrNum)S.ReadByte();
-        var mainPtr = S.ReadLocalPtr();
-        chHeader.FineTune = S.ReadByte();
-        chHeader.Unused = (byte)S.ReadByte();
+
+        GbPtr? mainPtr;
+        if (songHdr.IsChannelBanked)
+        {
+            // S.ReadFarPtr() with a byte between the two
+            var ptr = S.ReadUint16();
+            chHeader.FineTune = S.ReadByte();
+            var bank = S.ReadUint8();
+            mainPtr = GbPtrPool.Create(bank, ptr);
+        } 
+        else
+        {
+            mainPtr = S.ReadLocalPtr();
+            chHeader.FineTune = S.ReadByte();
+            chHeader.Unused = (byte)S.ReadByte();
+        }
+
         if (isFirstChannel)
         {
             if (songHdr.Id == 0x0C)
