@@ -25,13 +25,13 @@ public class TbmConversion
         foreach (var song in sheet.Rows)
         {
             Console.WriteLine($"-> {song.Path}");
-            Convert(song);
+            Convert(sheet, song);
         }
     }
 
 
 
-    private void Convert(InstructionSong sheetSong)
+    private void Convert(InstructionSheet sheet, InstructionSong sheetSong)
     {
         // Generate all "pretty" versions of the songs
         var prettySongs = sheetSong.Module.Songs.Select(x => x.ToPretty()).ToArray();
@@ -115,6 +115,7 @@ public class TbmConversion
                 Kind = sheetSong.Kind,
                 Priority = sheetSong.Priority,
                 ChannelCount = 0,
+                Flags = sheet.ChannelSplit ? SongHeaderFlags.SDF_BANKED : 0,
             };
 
             DoChannel(song.Ch1, sheetSong, waveMap, vibratoMap, macroLenMap, song, res);

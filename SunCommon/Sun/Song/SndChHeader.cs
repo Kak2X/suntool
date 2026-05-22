@@ -19,13 +19,23 @@ public class SndChHeader : IRomData
     public string? GetLabel() => $".{(IsUnused ? "unused_" : "")}ch{SoundChannelPtr.Normalize()}";
     public void WriteToDisasm(IMultiWriter sw)
     {
+        var isBanked = Parent.IsChannelBanked;
         sw.WriteIndent($"db {InitialStatus.GenerateConstLabel()} ; Initial playback status");
         sw.WriteIndent($"db {SoundChannelPtr} ; Sound channel ptr");
         if (Data == null)
+        {
             sw.WriteIndent($"dw {0.AsHexWord()} ; Data ptr");
+            sw.WriteIndent($"db {FineTune.ToSigned()} ; Initial fine tune");
+            sw.WriteIndent($"db $00 ; Unused");
+        }
         else
+        {
             sw.WriteIndent($"dw {Data.Main.Opcodes[0].GetLabel()} ; Data ptr");
-        sw.WriteIndent($"db {FineTune.ToSigned()} ; Initial fine tune");
-        sw.WriteIndent($"db {Unused.AsHexByte()} ; Initial vibrato ID");
+            sw.WriteIndent($"db {FineTune.ToSigned()} ; Initial fine tune");
+            if (isBanked)
+                sw.WriteIndent($"db BANK({Data.Main.Opcodes[0].GetLabel()}) ; Bank number");
+            else
+                sw.WriteIndent($"db {Unused.AsHexByte()} ; Unused");
+        }
     }
 }

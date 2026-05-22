@@ -7,6 +7,12 @@ OutputPath=out\some_folder
 ; If not specified, it defaults to BANK 0x01.
 StartingBank=0x01
 
+; Bank splitting mode.
+; The current disassembly supports distributing individual sound channels across multiple banks,
+; which increases the overrall song size limit, hence the default value being "Channel".
+; If targeting an older disassembly that doesn't support it, use "Song" instead.
+; SplitMode=Song
+
 ; If needed, it's possible to override the amount of free space in a bank, used to autodistribute tracks.
 ; The amount of free space is: <Bank size> - <Driver code size> - <Frequency table size>
 ; This can be useful when using the converter against a modified sound driver. 

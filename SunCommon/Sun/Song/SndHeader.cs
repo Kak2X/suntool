@@ -19,12 +19,15 @@ public class SndHeader : IRomData
     public int Id { get; set; }
     public SongKind Kind { get; set; }
     public int? ChannelCount { get; set; }
+    public SongHeaderFlags Flags { get; set; }
     public SongPriority Priority { get; set; }
+
+    public bool IsChannelBanked => (Flags & SongHeaderFlags.SDF_BANKED) != 0;
 
     public string? GetLabel() => $"SndHeader_{Name}";
     public int SizeInRom() => 1;
     public void WriteToDisasm(IMultiWriter sw)
     {
-        sw.WriteIndent($"db {(ChannelCount ?? Channels.Count).AsHexByte()} ; Number of channels");
+        sw.WriteIndent($"db {(Flags != 0 ? Flags.GenerateConstLabel() + "|" : "")}{(ChannelCount ?? Channels.Count).AsHexByte()} ; Number of channels");
     }
 }

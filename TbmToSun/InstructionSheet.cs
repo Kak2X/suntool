@@ -8,6 +8,7 @@ namespace TbmToSun
         public readonly string OutputPath;
         public readonly int? SplitOn;
         public readonly int StartingBank = Consts.DefaultStartingBank;
+        public readonly bool ChannelSplit = true;
         public readonly List<InstructionSong> Rows = [];
         public InstructionSheet(string file)
         {
@@ -23,6 +24,8 @@ namespace TbmToSun
                         OutputPath = cmd.Split('=')[1];
                     else if (cmd.StartsWith("InputPath="))
                         inputPath = cmd.Split('=')[1];
+                    else if (cmd.StartsWith("SplitMode="))
+                        ChannelSplit = cmd.Split('=')[1].ToUpperInvariant() == "CHANNEL";
                     else if (cmd.StartsWith("SplitOn="))
                         SplitOn = Convert.ToInt32(cmd.Split('=')[1], 16);
                     else if (cmd.StartsWith("StartingBank="))

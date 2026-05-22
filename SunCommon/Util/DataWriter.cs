@@ -9,7 +9,24 @@ public class DataWriter
     protected readonly PointerTable PtrTbl;
     protected readonly int SplitOn;
     protected readonly int StartingBank;
-    protected record SongDef(string FilePath, SndHeader Song);
+    protected class SongDef
+    {
+        public readonly string FilePath;
+        public readonly SndHeader? Song;
+        public readonly SndData? Data;
+
+        public SongDef(string path, SndHeader song)
+        {
+            FilePath = path;
+            Song = song;
+        }
+        public SongDef(string path, SndData data)
+        {
+            FilePath = path;
+            Data = data;
+        }
+    }
+
     private class SongGroupDef
     {
         public required List<SongDef> Groups;
@@ -43,6 +60,7 @@ public class DataWriter
         // For each song...
         foreach (var song in PtrTbl.Songs)
         {
+            var isBanked = song.IsChannelBanked;
             // Put it in a separate file
             var songPath = $"driver/{(song.Kind == SongKind.SFX ? "sfx/" : "bgm/")}{song.Name}.asm".ToLowerInvariant();
             W.ChangeFile(songPath);
@@ -57,6 +75,12 @@ public class DataWriter
             foreach (var chan in song.Channels)
                 if (chan.Data != null)
                 {
+                    if (isBanked)
+                    {
+                        var dataPath = $"driver/{(song.Kind == SongKind.SFX ? "sfx/" : "bgm/")}{song.Name}_ch{chan.SoundChannelPtr.Normalize()}.asm".ToLowerInvariant();
+                        files.Add(song.Id * 0x1000 + chan.SoundChannelPtr.Normalize(), new SongDef(dataPath, chan.Data));
+                        W.ChangeFile(dataPath);
+                    }
                     if (Write(chan.Data.Main))
                         foreach (var op in chan.Data.Main.Opcodes)
                             Write(op);
@@ -168,46 +192,56 @@ public class DataWriter
         {
             var realSplitOn = SplitOn - PtrTbl.SizeInRom();
 
-            // Find the song dependencies
             var dependencies = new Dictionary<int, SortedSet<int>>(); // SongId, GroupId
-            foreach (var def in files)
+           
+            var hasChannelBanks = files.Any(x => x.Value.Song == null);
+            if (hasChannelBanks)
             {
-                var set = new SortedSet<int>([def.Value.Song.Id]); // Obvious dependency on self
-                foreach (var ch in def.Value.Song.Channels)
+                // Dependency system bypassed when using channel banking.
+                dependencies = files.Keys.ToDictionary(x => x, x => new SortedSet<int>() { x });
+            } 
+            else
+            {
+                foreach (var def in files)
                 {
-                    // Both the sound channel and sound data can point to other songs
-                    set.Add(ch.Parent.Id);
-                    if (ch.Data != null)
+                    Debug.Assert(def.Value.Song != null);
+                    var set = new SortedSet<int>([def.Value.Song.Id]); // Obvious dependency on self
+                    foreach (var ch in def.Value.Song.Channels)
                     {
-                        set.Add(ch.Data.Parent.Parent.Id);
-                        // And the jump targets, too
-                        foreach (var op in ch.Data.Main.Opcodes.OfType<IHasPointer>())
-                            set.Add(op.Target!.Parent.Parent.Parent.Parent.Id);
-                        foreach (var sub in ch.Data.Subs)
-                            foreach (var op in sub.Opcodes.OfType<IHasPointer>())
+                        // Both the sound channel and sound data can point to other songs
+                        set.Add(ch.Parent.Id);
+                        if (ch.Data != null)
+                        {
+                            set.Add(ch.Data.Parent.Parent.Id);
+                            // And the jump targets, too
+                            foreach (var op in ch.Data.Main.Opcodes.OfType<IHasPointer>())
                                 set.Add(op.Target!.Parent.Parent.Parent.Parent.Id);
+                            foreach (var sub in ch.Data.Subs)
+                                foreach (var op in sub.Opcodes.OfType<IHasPointer>())
+                                    set.Add(op.Target!.Parent.Parent.Parent.Parent.Id);
+                        }
                     }
+                    dependencies[def.Value.Song.Id] = set;
                 }
-                dependencies[def.Value.Song.Id] = set;
-            }
-            // Compress dependencies to groups. Songs in each group need to be stored in the same bank.
-            var keys = dependencies.Keys.ToArray();
-            for (var i = 0; i < keys.Length; i++)
-            {
-                var delSrcList = false;
-                var srcList = dependencies[keys[i]];
-                for (var j = i + 1; j < keys.Length; j++)
+                // Compress dependencies to groups. Songs in each group need to be stored in the same bank.
+                var keys = dependencies.Keys.ToArray();
+                for (var i = 0; i < keys.Length; i++)
                 {
-                    var dstList = dependencies[keys[j]];
-                    if (srcList.Intersect(dstList).Any())
+                    var delSrcList = false;
+                    var srcList = dependencies[keys[i]];
+                    for (var j = i + 1; j < keys.Length; j++)
                     {
-                        foreach (var k in srcList)
-                            dstList.Add(k);
-                        delSrcList = true;
+                        var dstList = dependencies[keys[j]];
+                        if (srcList.Intersect(dstList).Any())
+                        {
+                            foreach (var k in srcList)
+                                dstList.Add(k);
+                            delSrcList = true;
+                        }
                     }
+                    if (delSrcList)
+                        dependencies.Remove(keys[i]);
                 }
-                if (delSrcList)
-                    dependencies.Remove(keys[i]);
             }
             // Create the final group counters
             var songGroups = dependencies.Select(x =>
@@ -217,18 +251,36 @@ public class DataWriter
                 var totalSize = 0;
                 var done = new ObjectSet();
                 foreach (var song in songs)
-                    if (AddSize(song.Song))
-                        foreach (var ch in song.Song.Channels)
-                            if (AddSize(ch) && ch.Data != null) // && AddSize(ch.Data))
-                            {
-                                if (AddSize(ch.Data.Main))
-                                    foreach (var op in ch.Data.Main.Opcodes)
-                                        AddSize(op);
-                                foreach (var sub in ch.Data.Subs)
-                                    if (AddSize(sub))
-                                        foreach (var op in sub.Opcodes)
-                                            AddSize(op);
-                            }
+                {
+                    if (song.Song != null)
+                    {
+                        if (AddSize(song.Song))
+                            foreach (var ch in song.Song.Channels)
+                                if (AddSize(ch) && ch.Data != null) // && AddSize(ch.Data))
+                                {
+                                    // Only add the data if it isn't banked
+                                    if (!song.Song.IsChannelBanked)
+                                        AddChannelDataSize(totalSize, done, ch.Data);
+                                }
+                    } 
+                    else if (song.Data != null)
+                    {
+                        // Definitely banked when getting here
+                        AddChannelDataSize(totalSize, done, song.Data);
+                    }
+                }
+
+                void AddChannelDataSize(int totalSize, ObjectSet done, SndData data)
+                {
+                    if (AddSize(data.Main))
+                        foreach (var op in data.Main.Opcodes)
+                            AddSize(op);
+                    foreach (var sub in data.Subs)
+                        if (AddSize(sub))
+                            foreach (var op in sub.Opcodes)
+                                AddSize(op);
+                }
+
                 bool AddSize(IRomData data)
                 {
                     if (!done.Add(data))
