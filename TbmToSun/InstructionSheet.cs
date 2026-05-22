@@ -29,7 +29,7 @@ namespace TbmToSun
                         StartingBank = Convert.ToInt32(cmd.Split('=')[1], 16);
                     else
                     {
-                        var row = cmds[i].Split(",").Select(x => x.Trim()).ToArray();
+                        var row = cmd.Split(",").Select(x => x.Trim()).ToArray();
                         if (row.Length > 1)
                         {
                             var fullPath = Path.Combine(inputPath, row[0]);
