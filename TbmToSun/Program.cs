@@ -24,6 +24,10 @@ else
         var extraSize = res.Vibratos.FullSizeInRom() + res.Waves.FullSizeInRom();
 
         Console.WriteLine($"Writing the disassembly files to \"{sheet.OutputPath}\"...");
+
+        if (res.PtrTbl.Songs.Count > 0x7E)
+            Console.WriteLine($"WARNING: Went over the song limit ({res.PtrTbl.Songs.Count}/{0x7E}), the converted files won't build.");
+
         using var sw = new MultiWriter(sheet.OutputPath);
         var writer = new DataWriter(sw, res.PtrTbl, (sheet.SplitOn ?? Consts.FreeSpaceBase) - extraSize, sheet.StartingBank);
         writer.WriteDisassembly();
